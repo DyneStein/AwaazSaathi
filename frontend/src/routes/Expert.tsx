@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { diffWords } from 'diff'
 import { ListChecks, CheckCircle2, UserRound, Clock, Video, Mic, Square, Send, Check, PenLine, X, BookPlus, BookCheck, ShieldCheck, ShieldAlert, Upload, LogOut, MapPin, Wheat, Image as ImageIcon, Wallet, TrendingUp, ChevronRight, Bell } from 'lucide-react'
 import { api, post, timeAgo, CROP_EN } from '../lib/api'
-import { useRecorder } from '../lib/audio'
+import { beep, useRecorder } from '../lib/audio'
 import { useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
 import { AppBar, AppShell, Empty, ErrorNote, LevelBadge, LiveDot, Meter, Mock, Reasons, Spinner, VideoCallView } from '../components/ui'
@@ -19,6 +19,7 @@ export default function Expert() {
   const [crop, setCrop] = useState('')
   const [sel, setSel] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [fu, setFu] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => { api('/api/expert/list').then(setExperts) }, [])
@@ -36,6 +37,7 @@ export default function Expert() {
     if (m.event.startsWith('rtc_')) { video.onSignal(m.event, m.data); return }
     loadQueue(); loadProfile()
     if (m.event === 'new_query') flash(`New question #${m.data.id} in the queue`)
+    if (m.event === 'farmer_followup') { setFu(m.data); beep(880, 220, 3); try { navigator.vibrate?.([300, 120, 300]) } catch { /* ignore */ } }
     if (m.event === 'score' && m.data.promoted_to) flash(`An expert was promoted to ${m.data.promoted_to}`)
     if (m.event === 'reset') { setSel(null); api('/api/expert/list').then(setExperts) }
   })
@@ -51,6 +53,13 @@ export default function Expert() {
 
   const overlay = <>
     {toast && <div className="absolute inset-x-3 top-3 z-50 drop-in rounded-xl bg-ink text-white px-4 py-3 shadow-lg text-sm flex items-center gap-2"><Bell size={16} className="text-mustard" />{toast}</div>}
+    {fu && <div role="alert" className="absolute inset-x-3 top-3 z-50 drop-in rounded-2xl bg-white border-2 border-danger shadow-2xl p-4 space-y-2">
+      <div className="flex items-center gap-2 text-danger font-bold"><Bell size={18} /> Farmer says the problem is still there<button onClick={() => setFu(null)} aria-label="Dismiss" className="ml-auto text-muted"><X size={18} /></button></div>
+      <div className="urdu text-[20px] font-bold !leading-[1.8]">مسئلہ ابھی باقی ہے</div>
+      <div className="text-xs text-muted">Question #{fu.id}, {CROP_EN[fu.crop] || fu.crop}, {fu.tehsil}. The 3-day follow-up call found the earlier answer did not work.</div>
+      <div className="urdu text-[15px] text-ink/80 line-clamp-2 !leading-[1.9]">{fu.transcript}</div>
+      <button onClick={() => { setSel(fu.id); setTab('queue'); setFu(null) }} className="btn btn-danger w-full">Open question</button>
+    </div>}
     <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'Farmer'} error={video.error} onDecline={video.decline} onHangup={video.hangup} />
   </>
 
@@ -86,7 +95,7 @@ function QueueList({ items, loading, onOpen, empty }: { items: any[]; loading: b
           <button onClick={() => onOpen(q.id)} className="surface w-full text-left p-3.5 hover:border-field-200 transition">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className={`tag border ${PRIO[q.priority][1]}`}>{PRIO[q.priority][0]}</span>
-              {q.reasons?.includes('farmer_requested_expert') && <span className="tag bg-danger-50 text-danger border border-danger/20">Farmer: still a problem</span>}
+              {q.reasons?.includes('followup_still_a_problem') && <span className="tag bg-danger-50 text-danger border border-danger/20">3-day follow-up: still a problem</span>}
               {q.route === 'senior_only' && <span className="tag bg-ink/5 text-ink">Senior only</span>}
               {q.status === 'drafted' && <span className="tag bg-sky-50 text-sky-800">Draft to review</span>}
               {q.promoted_kb_id && <span className="tag bg-field-100 text-field-800"><BookCheck size={12} /> In knowledge base</span>}
@@ -212,6 +221,11 @@ function Detail({ q, me, onDone, onCall }: { q: any; me: any; onDone: (m: string
         <button onClick={onCall} className="btn btn-quiet w-full mt-3"><Video size={18} /> Video call farmer (WhatsApp)</button>
       </section>
       {q.understanding?.weather?.temp_c !== undefined && <div className="surface px-4 py-3 text-sm text-muted">Weather in {q.tehsil} now: {Math.round(q.understanding.weather.temp_c)}°C, humidity {q.understanding.weather.humidity}%, rain chance {q.understanding.weather.rain_chance ?? 0}%</div>}
+      {q.reasons?.includes('followup_still_a_problem') && <section className="rounded-2xl border-2 border-danger/40 bg-danger-50 p-4 space-y-2">
+        <div className="font-bold text-danger flex items-center gap-2"><Bell size={16} /> Farmer follow-up: “مسئلہ ابھی باقی ہے”</div>
+        <div className="text-sm text-ink/80">In the 3-day follow-up call the farmer said the problem is still there. Give a new answer; the farmer gets a call back.</div>
+        {q.understanding?.previous_answer && <div className="rounded-xl bg-white border border-line p-3"><div className="text-xs text-muted mb-1">Previous answer (did not solve it)</div><div className="urdu text-[15px]">{q.understanding.previous_answer}</div></div>}
+      </section>}
       <Section title="Why the AI did not answer"><Reasons reasons={q.reasons} /><div className="mt-3"><Meter label="Retrieval confidence" value={q.retrieval_score} min={0.3} /></div></Section>
       <Section title="AI's attempted answer (not sent)">{q.ai_answer ? <div className="urdu text-[16px]">{q.ai_answer}</div> : <div className="text-sm text-muted">No confident answer was found.</div>}
         {!!q.retrieved?.length && <ul className="mt-2 divide-y divide-line border-t border-line">{q.retrieved.map((r: any) => <li key={r.kb_id} className="flex justify-between items-center py-1.5"><span className="text-xs text-muted">{r.score.toFixed(2)}</span><span className="urdu text-[14px] !leading-[1.9]">{r.title_ur}</span></li>)}</ul>}

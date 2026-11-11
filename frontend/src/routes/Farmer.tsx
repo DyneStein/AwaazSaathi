@@ -301,7 +301,7 @@ function IncomingCallback({ by, onAccept, onDecline }: { by: string; onAccept: (
 function FollowupCall({ f, setF }: { f: any; setF: (v: any) => void }) {
   const accept = async () => { setF({ ...f, stage: 'talking' }); await speak(f.audio_url, f.text); setF((x: any) => x && { ...x, stage: 'answer' }) }
   const reply = async (better: boolean) => {
-    if (!better) await post(`/api/query/${f.query_id}/to-expert`)
+    if (!better) await post(`/api/query/${f.query_id}/to-expert?source=followup`)
     setF({ ...f, stage: better ? 'thanks' : 'expert' }); setTimeout(() => setF(null), 2500)
   }
   return (

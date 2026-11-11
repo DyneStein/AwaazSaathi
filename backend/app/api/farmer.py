@@ -158,19 +158,27 @@ def photo(call_id: int, crop: str = Form(""), duration: str = Form(""), category
 
 
 @r.post("/query/{qid}/to-expert")
-def to_expert(qid: int, db=Depends(get_db)):
+def to_expert(qid: int, source: str = "", db=Depends(get_db)):
     """The farmer can always ask for a human agronomist, even after an AI answer."""
     from datetime import timedelta
     q = db.get(Query, qid)
     if not q:
         raise HTTPException(404)
     if q.status in ("answered_ai", "approved"):
+        prev = q.final_answer or q.ai_answer
+        q.understanding = {**(q.understanding or {}), "previous_answer": prev, "followup_at": now().isoformat()}
         q.status, q.route, q.priority = "queued", q.route if q.route != "ai" else "junior", max(q.priority, 2)
-        q.reasons = [r for r in (q.reasons or []) if r != "farmer_requested_expert"] + ["farmer_requested_expert"]
+        followup = source == "followup"  # the 3-day follow-up call: "the problem is still there"
+        tag = "followup_still_a_problem" if followup else "farmer_requested_expert"
+        q.reasons = [r for r in (q.reasons or []) if r != tag] + [tag]
         q.sla_due_at = now() + timedelta(hours=config.SLA_HOURS["normal"])
-        db.add(EventLog(kind="query", message=f"Farmer asked for a human expert on #{q.id}"))
+        db.add(EventLog(kind="followup" if followup else "query",
+                        message=(f"3-day follow-up: farmer says the problem is still there on #{q.id}, back to the experts"
+                                 if followup else f"Farmer asked for a human expert on #{q.id}")))
         db.commit()
-        hub.publish("expert", "new_query", {"id": q.id, "priority": q.priority, "route": q.route})
+        hub.publish("expert", "farmer_followup" if followup else "new_query", {"id": q.id, "priority": q.priority, "tehsil": q.tehsil, "crop": q.crop, "transcript": q.transcript,
+                                                  "previous_answer": prev})
+        hub.publish("admin", "query", {"id": q.id, "status": q.status})
     return {"ok": True, "status": q.status}
 
 

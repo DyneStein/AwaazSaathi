@@ -109,7 +109,7 @@ export function Meter({ value, min, label }: { value: number; min?: number; labe
 const REASON: Record<string, string> = {
   low_retrieval: 'Not covered by knowledge base', not_grounded: 'Answer not supported by sources',
   dose_question: 'Asks for a dose', banned_chemical: 'Banned chemical named',
-  suspected_outbreak: 'Possible outbreak', senior_only_topic: 'Senior-only topic', farmer_requested_expert: 'Farmer asked for an expert',
+  suspected_outbreak: 'Possible outbreak', senior_only_topic: 'Senior-only topic', farmer_requested_expert: 'Farmer asked for an expert', followup_still_a_problem: '3-day follow-up: still a problem',
 }
 export function Reasons({ reasons }: { reasons: string[] }) {
   if (!reasons?.length) return <span className="tag bg-field-100 text-field-800"><CheckCircle2 size={13} /> All safety checks passed</span>
