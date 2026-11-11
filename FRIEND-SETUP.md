@@ -1,11 +1,13 @@
 # AwaazSaathi demo: steps for the Windows laptop
 
+> **Rule:** this laptop, Dyen's Mac and the dealer phone must be on the **same Wi-Fi or hotspot**, and the server must be running on the Mac.
+
 ## Today (2 minutes): use the server already running on Dyen's Mac
 1. Connect the Windows laptop to the SAME hotspot as Dyen's Mac (and the dealer's Android phone).
 2. Open https://github.com/DyneStein/AwaazSaathi, click the green **Code** button, then **Download ZIP**. Right-click the ZIP and choose **Extract All**.
 3. In the extracted folder, double-click **Open-Demo.bat**.
    - If Windows says "Windows protected your PC", click **More info**, then **Run anyway**.
-4. It finds Dyen's Mac on the network by itself (about 2 seconds). Only if it can't, it asks for the IP: read it on the Mac at http://localhost:8000/connect.
+4. It finds Dyen's Mac on the network by itself, retrying up to 6 times (about 30 seconds). Only if it still can't, it asks for the IP (shown on the Mac at http://localhost:8000/connect), or press Enter to search again.
 5. Chrome opens 4 tabs: **Connect** (QR code), **Farmer**, **Expert** and **Admin**. Click **Allow** when Chrome asks for the microphone.
 6. Dealer phone: scan the QR code on the Connect tab and log in as **Aslam Zarai Markaz**, PIN **1111**, then tap **Turn on alert sound and vibration**.
 7. Before presenting: on the Admin tab press **Reset demo**.
