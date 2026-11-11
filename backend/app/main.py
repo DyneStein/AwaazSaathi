@@ -1,5 +1,6 @@
 """AwaazSaathi API + static front end on one port."""
 import asyncio
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -64,7 +65,14 @@ async def ws(socket: WebSocket, topics: str = "*"):
     await hub.connect(socket, set(topics.split(",")))
     try:
         while True:
-            await socket.receive_text()
+            raw = await socket.receive_text()
+            # Relay for live video-call signalling (WebRTC offer/answer/ICE). Only rtc_* events are relayed.
+            try:
+                msg = json.loads(raw)
+            except ValueError:
+                continue
+            if isinstance(msg, dict) and str(msg.get("event", "")).startswith("rtc_") and msg.get("to"):
+                await hub._send(str(msg["to"]), {"event": msg["event"], "data": msg.get("data") or {}})
     except WebSocketDisconnect:
         hub.disconnect(socket)
 
