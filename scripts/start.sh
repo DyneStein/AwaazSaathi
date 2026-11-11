@@ -25,4 +25,5 @@ echo ""
 uv run python -c "import qrcode; q=qrcode.QRCode(border=1); q.add_data('http://$IP:8000/dealer'); q.print_ascii(invert=True)" 2>/dev/null || true
 echo "  (scan with the dealer's Android phone - same hotspot)"
 echo ""
+(for i in $(seq 1 40); do curl -s localhost:8000/api/health >/dev/null && break; sleep 1; done; open "http://localhost:8000/connect" "http://localhost:8000/farmer" "http://localhost:8000/expert" "http://localhost:8000/admin") &
 exec uv run uvicorn app.main:app --host 0.0.0.0 --port 8000

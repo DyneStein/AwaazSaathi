@@ -17,7 +17,7 @@ HINT = "کسان اپنی فصل گندم، کپاس، مونجی، کماد ی�
 
 
 def local_available() -> bool:
-    return bool(shutil.which(config.WHISPER_BIN)) and Path(config.WHISPER_MODEL).exists()
+    return bool(shutil.which(config.WHISPER_BIN)) and bool(shutil.which(config.FFMPEG_BIN)) and Path(config.WHISPER_MODEL).exists()
 
 
 CROP_HINT = {"wheat": "گندم کنک", "cotton": "کپاس نرما", "rice": "مونجی چاول", "sugarcane": "کماد گنا", "maize": "مکئی"}
@@ -27,7 +27,7 @@ def _local(audio: bytes, hint: str = HINT) -> str:
     with tempfile.TemporaryDirectory() as d:
         src, wav = os.path.join(d, "in.bin"), os.path.join(d, "in.wav")
         Path(src).write_bytes(audio)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-ar", "16000", "-ac", "1", wav], check=True, timeout=30)
+        subprocess.run([config.FFMPEG_BIN, "-y", "-loglevel", "error", "-i", src, "-ar", "16000", "-ac", "1", wav], check=True, timeout=30)
         out = subprocess.run([config.WHISPER_BIN, "-m", config.WHISPER_MODEL, "-l", "ur", "-f", wav, "-nt", "-np",
                               "--prompt", hint], capture_output=True, text=True, timeout=60, check=True)
         return " ".join(out.stdout.split()).strip()

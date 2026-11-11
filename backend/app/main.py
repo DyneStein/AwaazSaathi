@@ -82,6 +82,37 @@ def ping():
     return {"ok": True}
 
 
+def lan_ip() -> str:
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))  # no packet is sent; picks the LAN interface
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+@app.get("/api/lan")
+def lan():
+    ip = lan_ip()
+    base = f"http://{ip}:8000"
+    return {"ip": ip, "base": base, "dealer": f"{base}/dealer", "farmer": f"{base}/farmer", "expert": f"{base}/expert", "admin": f"{base}/admin"}
+
+
+@app.get("/api/qr.svg")
+def qr_svg(u: str):
+    import io
+
+    import qrcode
+    import qrcode.image.svg
+    from fastapi.responses import Response
+    buf = io.BytesIO()
+    qrcode.make(u, image_factory=qrcode.image.svg.SvgPathFillImage, box_size=12, border=2).save(buf)
+    return Response(buf.getvalue(), media_type="image/svg+xml")
+
+
 if STATIC.exists():
     app.mount("/assets", StaticFiles(directory=STATIC / "assets"), name="assets")
 

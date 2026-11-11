@@ -3,7 +3,6 @@ __pycache__/
 *.pyc
 .venv/
 node_modules/
-backend/static/
 backend/var/
 .DS_Store
 .pytest_cache/
