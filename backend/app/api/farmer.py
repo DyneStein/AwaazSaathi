@@ -165,8 +165,8 @@ def to_expert(qid: int, db=Depends(get_db)):
     if not q:
         raise HTTPException(404)
     if q.status in ("answered_ai", "approved"):
-        q.status, q.route, q.priority = "queued", q.route if q.route != "ai" else "junior", max(q.priority, 1)
-        q.reasons = list(q.reasons or []) + ["farmer_requested_expert"]
+        q.status, q.route, q.priority = "queued", q.route if q.route != "ai" else "junior", max(q.priority, 2)
+        q.reasons = [r for r in (q.reasons or []) if r != "farmer_requested_expert"] + ["farmer_requested_expert"]
         q.sla_due_at = now() + timedelta(hours=config.SLA_HOURS["normal"])
         db.add(EventLog(kind="query", message=f"Farmer asked for a human expert on #{q.id}"))
         db.commit()

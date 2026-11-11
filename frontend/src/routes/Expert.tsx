@@ -7,7 +7,7 @@ import { useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
 import { AppBar, AppShell, Empty, ErrorNote, LevelBadge, LiveDot, Meter, Mock, Reasons, Spinner, VideoCallView } from '../components/ui'
 
-const PRIO: Record<number, [string, string]> = { 3: ['Outbreak', 'bg-danger-50 text-danger border-danger/20'], 2: ['Dose / pesticide', 'bg-warn-50 text-warn border-warn/20'], 1: ['Routine', 'bg-field-50 text-muted border-line'], 0: ['Routine', 'bg-field-50 text-muted border-line'] }
+const PRIO: Record<number, [string, string]> = { 3: ['Outbreak', 'bg-danger-50 text-danger border-danger/20'], 2: ['High priority', 'bg-warn-50 text-warn border-warn/20'], 1: ['Routine', 'bg-field-50 text-muted border-line'], 0: ['Routine', 'bg-field-50 text-muted border-line'] }
 
 export default function Expert() {
   const [experts, setExperts] = useState<any[]>([])
@@ -86,6 +86,7 @@ function QueueList({ items, loading, onOpen, empty }: { items: any[]; loading: b
           <button onClick={() => onOpen(q.id)} className="surface w-full text-left p-3.5 hover:border-field-200 transition">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className={`tag border ${PRIO[q.priority][1]}`}>{PRIO[q.priority][0]}</span>
+              {q.reasons?.includes('farmer_requested_expert') && <span className="tag bg-danger-50 text-danger border border-danger/20">Farmer: still a problem</span>}
               {q.route === 'senior_only' && <span className="tag bg-ink/5 text-ink">Senior only</span>}
               {q.status === 'drafted' && <span className="tag bg-sky-50 text-sky-800">Draft to review</span>}
               {q.promoted_kb_id && <span className="tag bg-field-100 text-field-800"><BookCheck size={12} /> In knowledge base</span>}
