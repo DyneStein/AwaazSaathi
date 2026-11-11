@@ -11,8 +11,9 @@ from app.pipeline import llm, retrieval, tts  # noqa: E402
 from app.pipeline.router import known_tags  # noqa: E402
 
 print("Generating prompt audio...")
-for k, t in prompts.PROMPTS.items():
-    print(f"  {'ok ' if tts.speak(t) else 'NO '} {k}")
+for lang in ("ur", "pa"):
+    for k, t in prompts.prompts_for(lang).items():
+        print(f"  {'ok ' if tts.speak(t) else 'NO '} {lang} {k}")
 print("Escalation + callback texts...")
 tts.speak(prompts.PROMPTS["escalated"])
 seed.run()

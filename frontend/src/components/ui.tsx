@@ -16,7 +16,7 @@ export function AppShell({ header, tabs, active, onTab, children, aside, overlay
 }) {
   return (
     <div className="min-h-[100dvh] lg:py-8 lg:flex lg:justify-center lg:items-start lg:gap-8">
-      <div dir={dir} className="relative mx-auto lg:mx-0 flex flex-col bg-field-50 w-full max-w-[440px] h-[100dvh] lg:h-[860px] lg:rounded-[32px] lg:border-[6px] lg:border-ink lg:shadow-2xl overflow-hidden">
+      <div dir={dir} className="relative mx-auto lg:mx-0 flex flex-col bg-canvas w-full max-w-[440px] h-[100dvh] lg:h-[860px] lg:rounded-[32px] lg:border lg:border-line lg:shadow-[0_20px_60px_-20px_rgba(16,40,28,.25)] overflow-hidden">
         {header}
         <main className="flex-1 overflow-y-auto no-scrollbar">{children}</main>
         {tabs && <TabBar tabs={tabs} active={active!} onTab={onTab!} />}
@@ -27,7 +27,7 @@ export function AppShell({ header, tabs, active, onTab, children, aside, overlay
   )
 }
 
-export function AppBar({ title, subtitle, back, right, tone = 'dark', logo }: { title: ReactNode; subtitle?: ReactNode; back?: () => void; right?: ReactNode; tone?: 'dark' | 'light'; logo?: string }) {
+export function AppBar({ title, subtitle, back, right, tone = 'light', logo }: { title: ReactNode; subtitle?: ReactNode; back?: () => void; right?: ReactNode; tone?: 'dark' | 'light'; logo?: string }) {
   const dark = tone === 'dark'
   return (
     <header className={`shrink-0 flex items-center gap-3 px-4 pt-4 pb-3 ${dark ? 'bg-field-800 text-white' : 'bg-white border-b border-line'}`}>
@@ -50,7 +50,7 @@ function TabBar({ tabs, active, onTab }: { tabs: Tab[]; active: string; onTab: (
         const Icon = t.icon
         return (
           <button key={t.key} onClick={() => onTab(t.key)} className={`relative flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-[11.5px] font-semibold ${on ? 'text-field-800' : 'text-muted'}`}>
-            {on && <span className="absolute top-0 h-[3px] w-10 rounded-b bg-mustard" />}
+            {on && <span className="absolute top-0 h-[3px] w-10 rounded-b bg-field-700" />}
             <span className="relative"><Icon size={22} strokeWidth={on ? 2.4 : 1.9} />
               {!!t.badge && <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] grid place-items-center px-1">{t.badge}</span>}
             </span>
@@ -66,14 +66,14 @@ export function Spinner({ size = 16, className = '' }: { size?: number; classNam
 }
 
 export function LiveDot({ on }: { on: boolean }) {
-  return <span title={on ? 'Live updates connected' : 'Reconnecting'} className={`inline-block h-2.5 w-2.5 rounded-full ${on ? 'bg-mustard' : 'bg-danger animate-pulse'}`} />
+  return <span title={on ? 'Live updates connected' : 'Reconnecting'} className={`inline-block h-2.5 w-2.5 rounded-full ${on ? 'bg-field-600' : 'bg-danger animate-pulse'}`} />
 }
 
 export function Mock({ children = 'Simulated' }: { children?: ReactNode }) {
   return <span className="tag bg-white text-muted border border-dashed border-muted/40">{children}</span>
 }
 
-const LEVEL: Record<string, string> = { junior: 'bg-sky-50 text-sky-800 border-sky-200', verified: 'bg-field-100 text-field-800 border-field-200', senior: 'bg-mustard-100 text-field-950 border-mustard' }
+const LEVEL: Record<string, string> = { junior: 'bg-sky-50 text-sky-800 border-sky-200', verified: 'bg-field-100 text-field-800 border-field-200', senior: 'bg-ink text-white border-ink' }
 export function LevelBadge({ level }: { level: string }) {
   return <span className={`tag border capitalize ${LEVEL[level] || ''}`}>{level}</span>
 }

@@ -8,14 +8,14 @@
   --color-field-600: #1B7A53;
   --color-field-200: #BFDCCB;
   --color-field-100: #E3EFE8;
-  --color-field-50: #F1F7F3;
-  --color-mustard: #E3B23C;
-  --color-mustard-600: #C9951F;
-  --color-mustard-100: #FBF1D6;
+  --color-field-50: #F5F8F6;
+  --color-mustard: #1B7A53;
+  --color-mustard-600: #136343;
+  --color-mustard-100: #E8F3EC;
   --color-ink: #15221B;
   --color-muted: #5E6B63;
   --color-line: #DDE3DC;
-  --color-canvas: #EEF2EE;
+  --color-canvas: #F4F6F5;
   --color-danger: #B42318;
   --color-danger-50: #FEF3F2;
   --color-warn: #B54708;
@@ -26,7 +26,7 @@
 
 html, body, #root { height: 100%; }
 body { background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
-:focus-visible { outline: 2.5px solid var(--color-mustard); outline-offset: 2px; }
+:focus-visible { outline: 2.5px solid var(--color-field-600); outline-offset: 2px; }
 button { cursor: pointer; }
 
 .urdu { font-family: var(--font-urdu); direction: rtl; line-height: 2.2; text-align: right; }
@@ -36,7 +36,7 @@ button { cursor: pointer; }
 .btn:disabled { opacity: .45; pointer-events: none; }
 .btn-primary { background: var(--color-field-800); color: #fff; }
 .btn-primary:hover { background: var(--color-field-900); }
-.btn-accent { background: var(--color-mustard); color: var(--color-field-950); }
+.btn-accent { background: var(--color-field-700); color: #fff; }
 .btn-accent:hover { background: var(--color-mustard-600); }
 .btn-quiet { background: var(--color-field-50); color: var(--color-field-900); border: 1px solid var(--color-line); }
 .btn-quiet:hover { background: var(--color-field-100); }
@@ -45,7 +45,7 @@ button { cursor: pointer; }
 .field { width: 100%; border: 1px solid var(--color-line); border-radius: 12px; padding: .65rem .8rem; background: #fff; }
 .field:focus { outline: 2px solid var(--color-field-600); outline-offset: 0; }
 
-@keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(227, 178, 60, .55); } 100% { box-shadow: 0 0 0 22px rgba(227, 178, 60, 0); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(27, 122, 83, .35); } 100% { box-shadow: 0 0 0 22px rgba(27, 122, 83, 0); } }
 .ring-pulse { animation: ring 1.4s infinite; }
 @keyframes enter { from { transform: translateY(-110%); } to { transform: none; } }
 .drop-in { animation: enter .35s cubic-bezier(.2, .9, .3, 1.1); }

@@ -86,7 +86,7 @@ function QueueList({ items, loading, onOpen, empty }: { items: any[]; loading: b
           <button onClick={() => onOpen(q.id)} className="surface w-full text-left p-3.5 hover:border-field-200 transition">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className={`tag border ${PRIO[q.priority][1]}`}>{PRIO[q.priority][0]}</span>
-              {q.route === 'senior_only' && <span className="tag bg-mustard-100 text-field-950">Senior only</span>}
+              {q.route === 'senior_only' && <span className="tag bg-ink/5 text-ink">Senior only</span>}
               {q.status === 'drafted' && <span className="tag bg-sky-50 text-sky-800">Draft to review</span>}
               {q.promoted_kb_id && <span className="tag bg-field-100 text-field-800"><BookCheck size={12} /> In knowledge base</span>}
               <span className="ml-auto"><SLA due={q.sla_due_at} status={q.status} /></span>
@@ -203,7 +203,7 @@ function Detail({ q, me, onDone, onCall }: { q: any; me: any; onDone: (m: string
   return (
     <div className="p-4 space-y-3 pb-8">
       <section className="surface p-4">
-        <div className="flex flex-wrap gap-1.5 mb-1"><span className={`tag border ${PRIO[q.priority][1]}`}>{PRIO[q.priority][0]}</span>{q.route === 'senior_only' && <span className="tag bg-mustard-100 text-field-950">Senior only</span>}<span className="tag bg-field-50 text-muted">{timeAgo(q.created_at)}, by {q.channel}</span></div>
+        <div className="flex flex-wrap gap-1.5 mb-1"><span className={`tag border ${PRIO[q.priority][1]}`}>{PRIO[q.priority][0]}</span>{q.route === 'senior_only' && <span className="tag bg-ink/5 text-ink">Senior only</span>}<span className="tag bg-field-50 text-muted">{timeAgo(q.created_at)}, by {q.channel}</span></div>
         <div className="urdu text-[21px] font-semibold">{q.transcript}</div>
         {q.normalized_query && q.normalized_query !== q.transcript && <div className="urdu text-[15px] text-muted">{q.normalized_query}</div>}
         {q.audio_url && <audio src={q.audio_url} controls className="w-full h-10 mt-2" />}
@@ -251,7 +251,7 @@ function Detail({ q, me, onDone, onCall }: { q: any; me: any; onDone: (m: string
           <button disabled={busy || !text.trim()} onClick={() => act(() => post(`/api/expert/query/${q.id}/draft`, { expert_id: me.id, text, audio_url: voice }), (r) => r.status === 'approved' ? 'Answer sent. Calling the farmer back.' : r.spot_check ? 'Sent for a random senior spot check' : 'Draft sent for senior review')} className="btn btn-primary w-full">{busy ? <Spinner /> : <Send size={17} />} {me.level === 'junior' ? 'Send draft for review' : 'Send answer'}</button>
         </section>
       ) : (
-        <div className="rounded-xl bg-mustard-100 border border-mustard p-3 text-sm">{me.verification_status !== 'verified' ? 'Your degree is not verified yet. You can answer once an admin approves it.' : 'Senior-only topic: dose, banned chemical or possible outbreak. A senior agronomist must answer.'}</div>
+        <div className="rounded-xl bg-field-50 border border-line p-3 text-sm">{me.verification_status !== 'verified' ? 'Your degree is not verified yet. You can answer once an admin approves it.' : 'Senior-only topic: dose, banned chemical or possible outbreak. A senior agronomist must answer.'}</div>
       )}
     </div>
   )

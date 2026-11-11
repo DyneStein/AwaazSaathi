@@ -16,8 +16,10 @@ r = APIRouter(prefix="/api")
 
 
 @r.get("/prompts")
-def get_prompts():
-    return {k: {"text": v, "audio_url": tts.speak(v)} for k, v in prompts.PROMPTS.items()}
+def get_prompts(lang: str = "ur"):
+    p = prompts.prompts_for(lang)
+    tts.speak_later(list(p.values()))  # fill any missing clips in the background, never block the page
+    return {k: {"text": v, "audio_url": tts.cached_url(v)} for k, v in p.items()}
 
 
 @r.get("/tts")
@@ -55,6 +57,22 @@ def call_start(body: StartIn, db=Depends(get_db)):
             "tehsil_ur": outbreak.TEHSILS.get(f.tehsil, {}).get("ur", f.tehsil), "known": known}
 
 
+class LangIn(BaseModel):
+    language: str
+
+
+@r.post("/call/{call_id}/language")
+def set_language(call_id: int, body: LangIn, db=Depends(get_db)):
+    c = db.get(Call, call_id)
+    if not c:
+        raise HTTPException(404)
+    c.language = "pa" if body.language == "pa" else "ur"
+    f = db.get(Farmer, c.farmer_id)
+    f.language = c.language
+    db.commit()
+    return {"ok": True}
+
+
 class TehsilIn(BaseModel):
     tehsil: str
 
@@ -70,11 +88,12 @@ def set_tehsil(call_id: int, body: TehsilIn, db=Depends(get_db)):
     return {"ok": True}
 
 
-def _result(q: Query, engine: str = "") -> dict:
+def _result(q: Query, engine: str = "", lang: str = "ur") -> dict:
     escalated = q.status != "answered_ai"
+    esc = prompts.prompts_for(lang)["escalated"]
     return {"query": query_out(q), "escalated": escalated, "stt_engine": engine,
-            "answer_text": q.final_answer if not escalated else prompts.PROMPTS["escalated"],
-            "answer_audio": q.final_audio_url if not escalated else tts.speak(prompts.PROMPTS["escalated"])}
+            "answer_text": q.final_answer if not escalated else esc,
+            "answer_audio": q.final_audio_url if not escalated else tts.speak(esc)}
 
 
 @r.post("/call/{call_id}/ask")
@@ -101,7 +120,7 @@ def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript
         raise HTTPException(400, "empty question")
     q = trust_router.process(db, farmer=f, call_id=call_id, crop=crop, duration=duration,
                              transcript=transcript.strip(), audio_url=audio_url)
-    return _result(q, engine)
+    return _result(q, engine, c.language)
 
 
 @r.post("/call/{call_id}/photo")
@@ -122,7 +141,7 @@ def photo(call_id: int, crop: str = Form(""), duration: str = Form(""), image: U
     desc = v.get("description_ur") or "، ".join(v.get("symptoms_ur") or [])
     q = trust_router.process(db, farmer=f, call_id=call_id, crop=crop or v.get("crop", ""), duration=duration,
                              transcript=f"(تصویر) {desc}", channel="photo", photo_url=f"/uploads/{name}", vision=v)
-    res = _result(q, "vision")
+    res = _result(q, "vision", c.language)
     res["vision"] = v
     return res
 

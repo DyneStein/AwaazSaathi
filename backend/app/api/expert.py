@@ -74,7 +74,9 @@ def upload_audio(audio: UploadFile = File(...)):
 def finalize(db, q: Query, text: str, by: Expert, audio_url: str | None = None) -> None:
     """Approved answer -> TTS -> voice callback to the farmer (+ MOCK SMS/WhatsApp backup)."""
     q.final_answer, q.status, q.answered_at, q.answered_by = text, "approved", now(), by.name
-    full = prompts.PROMPTS["callback_intro"] + " " + text
+    from ..models import Farmer
+    farmer = db.get(Farmer, q.farmer_id)
+    full = prompts.prompts_for(farmer.language if farmer else "ur")["callback_intro"] + " " + text
     q.final_audio_url = tts.speak(full)
     db.add(InboxItem(farmer_id=q.farmer_id, kind="callback", title_ur="ماہر کا جواب", text_ur=text,
                      audio_url=q.final_audio_url, query_id=q.id))

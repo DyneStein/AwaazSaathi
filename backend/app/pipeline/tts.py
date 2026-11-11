@@ -18,7 +18,8 @@ def _name(text: str) -> str:
 
 def cached_url(text: str) -> str | None:
     f = config.TTS_DIR / _name(text)
-    return f"/media/tts/{f.name}" if f.exists() else None
+    # an interrupted download can leave an empty/partial file: treat it as missing
+    return f"/media/tts/{f.name}" if f.exists() and f.stat().st_size > 2000 else None
 
 
 def _edge(text: str, out) -> None:
@@ -51,6 +52,14 @@ def edge_available() -> bool:
         return False
 
 
+def speak_later(texts: list[str]) -> None:
+    """Generate missing clips in a background thread so pages never wait on the network."""
+    import threading
+    missing = [t for t in texts if t and not cached_url(t)]
+    if missing and not state.is_offline():
+        threading.Thread(target=lambda: [speak(t) for t in missing], daemon=True).start()
+
+
 def speak(text: str) -> str | None:
     """Returns a URL for an mp3 of `text`, or None if unavailable."""
     text = (text or "").strip()
@@ -69,7 +78,7 @@ def speak(text: str) -> str | None:
         t0 = time.time()
         try:
             fn(text, out)
-            if out.exists() and out.stat().st_size > 500:
+            if out.exists() and out.stat().st_size > 2000:
                 state.mark("tts", True, label, int((time.time() - t0) * 1000))
                 return cached_url(text)
         except Exception as e:  # noqa: BLE001

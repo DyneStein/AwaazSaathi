@@ -9,6 +9,14 @@ import { AppBar, AppShell, LiveDot, Meter, Mock, Reasons, Spinner, VideoCallView
 type Step = 'idle' | 'connecting' | 'welcome' | 'notice' | 'tehsil' | 'tehsil_pick' | 'crop' | 'duration' | 'ask' | 'thinking'
   | 'answer' | 'escalated' | 'more' | 'consent' | 'ended'
 type Prompt = { text: string; audio_url: string | null }
+type Lang = 'ur' | 'pa'
+const UI = {
+  ur: { call: 'کال', inbox: 'جوابات', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان کا ساتھی', sub: 'اپنی فصل کا سوال پوچھیں، اپنی زبان میں', callNow: 'ہیلپ لائن پر کال کریں', connecting: 'کال مل رہی ہے…', fromKb: 'ماہرین کی منظور شدہ معلومات سے جواب', toExpert: 'ماہر کو بھیج دیا گیا', listening: 'سن رہے ہیں', thinking: 'سمجھ رہے ہیں', stopHint: 'بات ختم ہو تو دبائیں', recHint: 'دبائیں اور اپنا سوال بولیں', typeHere: 'یا یہاں لکھیں', incoming: 'آنے والی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ابھی کوئی جواب نہیں', stop: 'روکیں', listen: 'آواز میں سنیں', sendPhoto: 'پتے کی تصویر بھیجیں', pick: 'تصویر لیں یا چنیں', kept: 'ریکارڈنگ محفوظ کر لی گئی', deleted: 'ریکارڈنگ مٹا دی گئی', ai: 'AI جواب', inPhoto: 'تصویر میں:', lang: 'زبان' },
+  pa: { call: 'کال', inbox: 'جواب', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان دا ساتھی', sub: 'اپنی فصل دا سوال پچھو، اپنی بولی وچ', callNow: 'ہیلپ لائن تے کال کرو', connecting: 'کال مل رہی اے…', fromKb: 'ماہراں دی منظور شدہ معلومات توں جواب', toExpert: 'ماہر نوں گھل دتا گیا', listening: 'سن رہے آں', thinking: 'سمجھ رہے آں', stopHint: 'گل مکے تے دباؤ', recHint: 'دباؤ تے اپنا سوال بولو', typeHere: 'یا ایتھے لکھو', incoming: 'آندی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ہلے کوئی جواب نئیں', stop: 'روکو', listen: 'آواز وچ سنو', sendPhoto: 'پتے دی تصویر گھلو', pick: 'تصویر لوو یا چنو', kept: 'ریکارڈنگ محفوظ کر لئی گئی', deleted: 'ریکارڈنگ مٹا دتی گئی', ai: 'AI جواب', inPhoto: 'تصویر وچ:', lang: 'بولی' },
+}
+let L = UI.ur
+const CROP_PA: Record<string, string> = { wheat: 'کنک', cotton: 'کپاہ', rice: 'مونجی', sugarcane: 'کماد', maize: 'مکئی' }
+const cropName = (c: string) => (L === UI.pa ? CROP_PA[c] : CROP_UR[c])
 
 // English subtitles for the jury; the farmer hears and sees Urdu.
 const EN: Record<string, string> = {
@@ -32,7 +40,8 @@ export default function Farmer() {
   const [tab, setTab] = useState('call')
   const [step, setStep] = useState<Step>('idle')
   const [call, setCall] = useState<any>(null)
-  const [lang, setLang] = useState<'pa' | 'ur'>('pa')
+  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('farmerLang') as Lang) || 'ur')
+  L = UI[lang]
   const [crop, setCrop] = useState('')
   const [duration, setDuration] = useState('')
   const [speaking, setSpeaking] = useState(false)
@@ -48,9 +57,9 @@ export default function Farmer() {
 
   useEffect(() => {
     api('/api/demo/personas').then((m) => { setMeta(m); setPhone(m.personas[24]?.phone || m.personas[0].phone) })
-    api('/api/prompts').then(setPrompts).catch(() => {})
     api('/api/status').then((s) => setOffline(s.offline)).catch(() => {})
   }, [])
+  useEffect(() => { api(`/api/prompts?lang=${lang}`).then(setPrompts).catch(() => {}); try { localStorage.setItem('farmerLang', lang) } catch { /* ignore */ } }, [lang])
   useEffect(() => { if (phone) api(`/api/farmer/lookup?phone=${phone}`).then((r) => setFarmerId(r.farmer_id)) }, [phone])
   const loadInbox = useCallback(() => { if (farmerId) api(`/api/farmer/${farmerId}/inbox`).then(setInbox).catch(() => {}) }, [farmerId])
   useEffect(loadInbox, [loadInbox])
@@ -107,7 +116,7 @@ export default function Farmer() {
   const press = async (d: string) => {
     if (['idle', 'ended', 'connecting', 'thinking'].includes(step)) return
     beep(1200 + Number(d) * 40, 70); stopAudio(); setSpeaking(false)
-    if (step === 'welcome' && (d === '1' || d === '2')) { setLang(d === '1' ? 'pa' : 'ur'); go('notice') }
+    if (step === 'welcome' && (d === '1' || d === '2')) { const l: Lang = d === '1' ? 'pa' : 'ur'; const p = await api(`/api/prompts?lang=${l}`); setPrompts(p); setLang(l); post(`/api/call/${call.call_id}/language`, { language: l }); go('notice') }
     else if (step === 'notice') go(call?.known ? 'tehsil' : 'tehsil_pick')
     else if (step === 'tehsil') { if (d === '1') go('crop'); else if (d === '2') go('tehsil_pick') }
     else if (step === 'tehsil_pick') {
@@ -122,7 +131,7 @@ export default function Farmer() {
       await post(`/api/call/${call.call_id}/consent`, { keep })
       const p = prompts[keep ? 'consent_yes' : 'consent_no']; setSpeaking(true)
       await speak(p?.audio_url, p?.text || ''); setSpeaking(false)
-      setStep('ended'); setNote(keep ? 'ریکارڈنگ محفوظ کر لی گئی' : 'ریکارڈنگ مٹا دی گئی')
+      setStep('ended'); setNote(keep ? L.kept : L.deleted)
     }
   }
   useEffect(() => {
@@ -149,15 +158,19 @@ export default function Farmer() {
   const unheard = inbox.filter((i) => !i.heard).length
   const inCall = !['idle', 'ended'].includes(step)
   const tabs = [
-    { key: 'call', label: <span className="urdu !leading-none text-[13px]">کال</span>, icon: Phone },
-    { key: 'inbox', label: <span className="urdu !leading-none text-[13px]">جوابات</span>, icon: Inbox, badge: unheard },
-    { key: 'photo', label: <span className="urdu !leading-none text-[13px]">تصویر</span>, icon: Camera },
+    { key: 'call', label: <span className="urdu !leading-none text-[13px]">{L.call}</span>, icon: Phone },
+    { key: 'inbox', label: <span className="urdu !leading-none text-[13px]">{L.inbox}</span>, icon: Inbox, badge: unheard },
+    { key: 'photo', label: <span className="urdu !leading-none text-[13px]">{L.photo}</span>, icon: Camera },
     { key: 'ai', label: <span className="text-[12px]">AI</span>, icon: ListChecks },
   ]
 
   return (
     <AppShell dir="rtl" tabs={inCall ? undefined : tabs} active={tab} onTab={setTab}
-      header={<AppBar title={<span className="urdu !leading-tight text-[20px]">آواز ساتھی</span>} subtitle={<span dir="ltr">Farmer helpline{offline ? ', offline mode' : ''}</span>} right={<LiveDot on={ws.connected} />} />}
+      header={<AppBar title={<span className="urdu !leading-tight text-[20px]">{L.title}</span>} subtitle={<span dir="ltr">Farmer helpline{offline ? ', offline mode' : ''}</span>} right={<>
+        {!inCall && <div dir="rtl" role="group" aria-label="Language" className="flex rounded-lg border border-line bg-field-50 p-0.5">
+          {(['ur', 'pa'] as Lang[]).map((l) => <button key={l} onClick={() => setLang(l)} className={`urdu !leading-none px-2.5 py-1.5 rounded-md text-[13px] ${lang === l ? 'bg-white shadow-sm text-field-800 font-bold' : 'text-muted'}`}>{l === 'ur' ? 'اردو' : 'پنجابی'}</button>)}
+        </div>}
+        <LiveDot on={ws.connected} /></>} />}
       aside={<Pipeline result={result} step={step} />}
       overlay={<>
         {incoming && <IncomingCallback by={incoming.by} onAccept={acceptIncoming} onDecline={() => setIncoming(null)} />}
@@ -170,12 +183,12 @@ export default function Farmer() {
         <div className="flex flex-col items-center px-6 pt-10 pb-8 gap-6 text-center">
           <img src="/icon.svg" className="h-20 w-20 rounded-[22px] shadow-lg" alt="" />
           <div>
-            <div className="urdu text-[28px] font-bold !text-center !leading-[1.9]">کسان کا ساتھی</div>
-            <div className="urdu text-lg text-muted !text-center !leading-[2]">اپنی فصل کا سوال پوچھیں، اپنی زبان میں</div>
+            <div className="urdu text-[28px] font-bold !text-center !leading-[1.9]">{L.hero}</div>
+            <div className="urdu text-lg text-muted !text-center !leading-[2]">{L.sub}</div>
           </div>
           {step === 'ended' && note && <div className="w-full rounded-xl bg-field-100 text-field-900 px-4 py-2 urdu !text-center !leading-[2] flex items-center justify-center gap-2"><CheckCircle2 size={18} /> {note}</div>}
           <button onClick={startCall} aria-label="Call the helpline" className="h-24 w-24 rounded-full bg-field-700 hover:bg-field-800 text-white grid place-items-center shadow-xl ring-pulse"><Phone size={38} /></button>
-          <div className="urdu text-lg !text-center !leading-[1.8]">ہیلپ لائن پر کال کریں</div>
+          <div className="urdu text-lg !text-center !leading-[1.8]">{L.callNow}</div>
           <label className="w-full text-start" dir="ltr">
             <span className="text-xs text-muted">Demo caller ID (stored only as a hash)</span>
             <select value={phone} onChange={(e) => setPhone(e.target.value)} className="field mt-1 text-sm">
@@ -196,54 +209,54 @@ function InCall({ step, prompts, call, lang, crop, meta, result, speaking, rec, 
   const pk: Record<string, string> = { welcome: 'welcome', notice: 'ai_notice', tehsil: 'tehsil_confirm', tehsil_pick: 'tehsil_pick', crop: 'crop', duration: 'duration', ask: 'ask', thinking: 'thinking', more: 'more', consent: 'consent' }
   const key = pk[step]
   return (
-    <div className="min-h-full flex flex-col bg-field-900 text-white px-5 pt-4 pb-5">
+    <div className="min-h-full flex flex-col bg-white text-ink px-5 pt-4 pb-5">
       <div className="flex justify-center gap-1.5 flex-wrap">
-        <span className="tag bg-white/10 text-white"><Bot size={13} /> AI</span>
-        {!['welcome', 'connecting'].includes(step) && <span className="tag bg-white/10 text-white urdu !leading-normal">{lang === 'pa' ? 'پنجابی' : 'اردو'}</span>}
-        {call?.tehsil_ur && !['welcome', 'connecting', 'notice'].includes(step) && <span className="tag bg-white/10 text-white urdu !leading-normal">{call.tehsil_ur}</span>}
-        {crop && <span className="tag bg-white/10 text-white urdu !leading-normal">{CROP_UR[crop]}</span>}
+        <span className="tag bg-field-50 text-field-800 border border-line"><Bot size={13} /> AI</span>
+        {!['welcome', 'connecting'].includes(step) && <span className="tag bg-field-50 text-field-800 border border-line urdu !leading-normal">{lang === 'pa' ? 'پنجابی' : 'اردو'}</span>}
+        {call?.tehsil_ur && !['welcome', 'connecting', 'notice'].includes(step) && <span className="tag bg-field-50 text-field-800 border border-line urdu !leading-normal">{call.tehsil_ur}</span>}
+        {crop && <span className="tag bg-field-50 text-field-800 border border-line urdu !leading-normal">{cropName(crop)}</span>}
       </div>
 
-      <div key={step} className="mt-4 rounded-2xl bg-white/[.07] border border-white/10 p-4 min-h-[180px]">
-        {step === 'connecting' && <div className="flex flex-col items-center gap-3 py-8"><div className="h-16 w-16 rounded-full bg-field-600 grid place-items-center ring-pulse"><Phone size={28} /></div><div className="urdu text-field-200 !text-center">کال مل رہی ہے…</div></div>}
+      <div key={step} className="mt-4 rounded-2xl bg-field-50 border border-line p-4 min-h-[180px]">
+        {step === 'connecting' && <div className="flex flex-col items-center gap-3 py-8"><div className="h-16 w-16 rounded-full bg-field-700 text-white grid place-items-center ring-pulse"><Phone size={28} /></div><div className="urdu text-muted !text-center">{L.connecting}</div></div>}
         {key && <>
           <div className="urdu text-[22px] !leading-[2.3]">{prompts[key]?.text}</div>
-          {EN[key] && <div dir="ltr" className="text-[12px] text-field-200 mt-2 text-left">{EN[key]}</div>}
+          {EN[key] && <div dir="ltr" className="text-[12px] text-muted mt-2 text-left">{EN[key]}</div>}
         </>}
-        {step === 'tehsil' && <div className="mt-3 text-center"><span className="urdu text-[30px] font-bold text-mustard">{call?.tehsil_ur}</span></div>}
-        {step === 'tehsil_pick' && <div className="grid grid-cols-2 gap-1.5 mt-3">{meta?.tehsils.slice(0, 10).map((t: any, i: number) => <div key={t.name} className="rounded-lg bg-white/5 px-2 py-1 flex items-center gap-2"><b className="text-mustard">{(i + 1) % 10}</b><span className="urdu !leading-normal">{t.ur}</span></div>)}</div>}
+        {step === 'tehsil' && <div className="mt-3 text-center"><span className="urdu text-[30px] font-bold text-field-700">{call?.tehsil_ur}</span></div>}
+        {step === 'tehsil_pick' && <div className="grid grid-cols-2 gap-1.5 mt-3">{meta?.tehsils.slice(0, 10).map((t: any, i: number) => <div key={t.name} className="rounded-lg bg-white border border-line px-2 py-1 flex items-center gap-2"><b className="text-field-700">{(i + 1) % 10}</b><span className="urdu !leading-normal">{t.ur}</span></div>)}</div>}
         {(step === 'answer' || step === 'escalated') && result && <>
-          <div className={`tag mb-2 ${step === 'answer' ? 'bg-field-600 text-white' : 'bg-mustard text-field-950'}`}>
-            {step === 'answer' ? <><ShieldCheck size={13} /> <span className="urdu !leading-normal">ماہرین کی منظور شدہ معلومات سے جواب</span></> : <><UserRound size={13} /> <span className="urdu !leading-normal">ماہر کو بھیج دیا گیا</span></>}
+          <div className={`tag mb-2 ${step === 'answer' ? 'bg-field-700 text-white' : 'bg-ink text-white'}`}>
+            {step === 'answer' ? <><ShieldCheck size={13} /> <span className="urdu !leading-normal">{L.fromKb}</span></> : <><UserRound size={13} /> <span className="urdu !leading-normal">{L.toExpert}</span></>}
           </div>
           <div className="urdu text-[21px] !leading-[2.25]">{result.answer_text}</div>
         </>}
       </div>
 
       <div className="h-9 mt-3 flex items-center justify-center">
-        {rec.recording ? <span className="tag bg-danger text-white py-1"><span className="eq"><span /><span /><span /><span /></span> <span className="urdu !leading-normal">سن رہے ہیں</span></span>
-          : step === 'thinking' ? <span className="tag bg-mustard text-field-950 py-1"><Spinner size={14} /> <span className="urdu !leading-normal">سمجھ رہے ہیں</span></span>
-          : speaking ? <span className="tag bg-white/15 text-white py-1"><Volume2 size={14} /> <span className="eq text-mustard"><span /><span /><span /><span /></span></span> : null}
+        {rec.recording ? <span className="tag bg-danger text-white py-1"><span className="eq"><span /><span /><span /><span /></span> <span className="urdu !leading-normal">{L.listening}</span></span>
+          : step === 'thinking' ? <span className="tag bg-field-100 text-field-800 py-1"><Spinner size={14} /> <span className="urdu !leading-normal">{L.thinking}</span></span>
+          : speaking ? <span className="tag bg-field-50 text-field-800 border border-line py-1"><Volume2 size={14} /> <span className="eq text-field-600"><span /><span /><span /><span /></span></span> : null}
       </div>
 
       {step === 'ask' ? (
         <div className="flex flex-col items-center gap-3">
-          <button onClick={onRec} aria-label={rec.recording ? 'Stop and send' : 'Record question'} className={`h-24 w-24 rounded-full grid place-items-center shadow-xl ${rec.recording ? 'bg-danger ring-pulse' : 'bg-mustard text-field-950 hover:bg-mustard-600'}`}>{rec.recording ? <Square size={32} fill="currentColor" /> : <Mic size={40} />}</button>
-          <div className="urdu text-field-200 !text-center !leading-[1.8]">{rec.recording ? 'بات ختم ہو تو دبائیں' : 'دبائیں اور اپنا سوال بولیں'}</div>
-          {(rec.error || note) && <div dir="ltr" className="text-xs rounded-lg bg-mustard/15 text-mustard-100 px-3 py-2 w-full flex gap-2"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{rec.error || note}</div>}
+          <button onClick={onRec} aria-label={rec.recording ? 'Stop and send' : 'Record question'} className={`h-24 w-24 rounded-full grid place-items-center shadow-xl ${rec.recording ? 'bg-danger ring-pulse' : 'bg-field-700 text-white hover:bg-field-800'}`}>{rec.recording ? <Square size={32} fill="currentColor" /> : <Mic size={40} />}</button>
+          <div className="urdu text-muted !text-center !leading-[1.8]">{rec.recording ? L.stopHint : L.recHint}</div>
+          {(rec.error || note) && <div dir="ltr" className="text-xs rounded-lg bg-warn-50 text-warn px-3 py-2 w-full flex gap-2"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{rec.error || note}</div>}
           <div className="w-full flex gap-2">
-            <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="یا یہاں لکھیں" className="flex-1 rounded-xl bg-white/10 border border-white/15 px-3 py-2 urdu !leading-normal placeholder:text-field-200/60" />
-            <button disabled={!typed.trim()} onClick={() => onSubmit({ transcript: typed })} aria-label="Send" className="btn bg-white/15 !px-3"><Send size={18} className="-scale-x-100" /></button>
+            <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={L.typeHere} className="flex-1 rounded-xl bg-white border border-line px-3 py-2 urdu !leading-normal placeholder:text-muted/70" />
+            <button disabled={!typed.trim()} onClick={() => onSubmit({ transcript: typed })} aria-label="Send" className="btn btn-primary !px-3"><Send size={18} className="-scale-x-100" /></button>
           </div>
           <div dir="ltr" className="w-full">
-            <div className="text-[11px] text-field-200 mb-1">Sample questions (offline-safe)</div>
+            <div className="text-[11px] text-muted mb-1">Sample questions (offline-safe)</div>
             <div className="flex flex-wrap gap-1.5">
-              {meta && Object.entries(meta.canned).map(([k, c]: any) => <button key={k} onClick={() => onSubmit({ transcript: c.transcript })} className="tag bg-white/10 hover:bg-white/20 text-white py-1">{c.label.split('(')[0].replace(':', '')}</button>)}
+              {meta && Object.entries(meta.canned).map(([k, c]: any) => <button key={k} onClick={() => onSubmit({ transcript: c.transcript })} className="tag bg-white border border-line hover:border-field-600 text-ink py-1">{c.label.split('(')[0].replace(':', '')}</button>)}
             </div>
           </div>
         </div>
       ) : <Keypad onPress={onPress} active={['welcome', 'notice', 'tehsil', 'tehsil_pick', 'crop', 'duration', 'more', 'consent'].includes(step)} />}
-      <button onClick={onEnd} aria-label="End call" className="mt-auto pt-4 mx-auto"><span className="h-14 w-14 rounded-full bg-danger grid place-items-center"><PhoneOff size={24} /></span></button>
+      <button onClick={onEnd} aria-label="End call" className="mt-auto pt-4 mx-auto"><span className="h-14 w-14 rounded-full bg-danger text-white grid place-items-center"><PhoneOff size={24} /></span></button>
     </div>
   )
 }
@@ -252,27 +265,27 @@ function Keypad({ onPress, active }: { onPress: (d: string) => void; active: boo
   return (
     <div dir="ltr" className={`grid grid-cols-3 gap-3 mt-2 px-3 ${active ? '' : 'opacity-35 pointer-events-none'}`}>
       {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((k) => (
-        <button key={k} onClick={() => onPress(k)} className="h-14 rounded-2xl bg-white/[.08] hover:bg-white/15 active:bg-mustard active:text-field-950 text-2xl font-semibold">{k}</button>))}
+        <button key={k} onClick={() => onPress(k)} className="h-14 rounded-2xl bg-field-50 border border-line hover:bg-field-100 active:bg-field-700 active:text-white text-2xl font-semibold text-ink">{k}</button>))}
     </div>
   )
 }
 
 function IncomingCallback({ by, onAccept, onDecline }: { by: string; onAccept: () => void; onDecline: () => void }) {
   return (
-    <div className="absolute inset-0 z-30 bg-field-950/97 text-white flex flex-col items-center justify-center gap-6 px-6 text-center drop-in">
-      <div className="urdu text-field-200 !text-center">آنے والی کال</div>
-      <div className="h-24 w-24 rounded-full bg-mustard text-field-950 grid place-items-center ring-pulse"><PhoneIncoming size={40} /></div>
-      <div><div className="urdu text-[26px] font-bold !text-center !leading-[1.9]">آواز ساتھی ماہر</div><div dir="ltr" className="text-field-200 text-sm">Answer approved by {by}</div></div>
+    <div className="absolute inset-0 z-30 bg-white text-ink flex flex-col items-center justify-center gap-6 px-6 text-center drop-in">
+      <div className="urdu text-muted !text-center">{L.incoming}</div>
+      <div className="h-24 w-24 rounded-full bg-field-700 text-white grid place-items-center ring-pulse"><PhoneIncoming size={40} /></div>
+      <div><div className="urdu text-[26px] font-bold !text-center !leading-[1.9]">{L.expert}</div><div dir="ltr" className="text-muted text-sm">Answer approved by {by}</div></div>
       <div className="flex gap-14">
-        <button onClick={onDecline} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger grid place-items-center"><PhoneOff /></button>
-        <button onClick={onAccept} aria-label="Accept" className="h-16 w-16 rounded-full bg-field-600 grid place-items-center"><Phone /></button>
+        <button onClick={onDecline} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger text-white grid place-items-center"><PhoneOff /></button>
+        <button onClick={onAccept} aria-label="Accept" className="h-16 w-16 rounded-full bg-field-700 text-white grid place-items-center"><Phone /></button>
       </div>
     </div>
   )
 }
 
 function InboxList({ items, playing, onPlay }: { items: any[]; playing: number | null; onPlay: (it: any) => void }) {
-  if (!items.length) return <Empty icon={Inbox} title="ابھی کوئی جواب نہیں"><span dir="ltr">Expert answers and outbreak alerts arrive here as voice messages.</span></Empty>
+  if (!items.length) return <Empty icon={Inbox} title={L.noInbox}><span dir="ltr">Expert answers and outbreak alerts arrive here as voice messages.</span></Empty>
   return (
     <ul className="p-4 space-y-3">
       {items.map((it) => {
@@ -285,7 +298,7 @@ function InboxList({ items, playing, onPlay }: { items: any[]; playing: number |
               {!it.heard && <span className="h-2.5 w-2.5 rounded-full bg-mustard" />}
             </div>
             <div className="urdu text-[17px] mt-2 text-ink/90">{it.text_ur}</div>
-            <button onClick={() => onPlay(it)} className="btn btn-quiet w-full mt-2">{playing === it.id ? <><Pause size={18} /> <span className="urdu !leading-normal">روکیں</span></> : <><Play size={18} /> <span className="urdu !leading-normal">آواز میں سنیں</span></>}</button>
+            <button onClick={() => onPlay(it)} className="btn btn-quiet w-full mt-2">{playing === it.id ? <><Pause size={18} /> <span className="urdu !leading-normal">{L.stop}</span></> : <><Play size={18} /> <span className="urdu !leading-normal">{L.listen}</span></>}</button>
           </li>)
       })}
       <li dir="ltr" className="text-[11px] text-muted text-center flex items-center justify-center gap-2"><Mock>SMS / WhatsApp backup simulated</Mock></li>
@@ -313,17 +326,17 @@ function PhotoDoor({ meta, phone, lang, onResult }: { meta: any; phone: string; 
     <div className="p-4 space-y-4">
       <div className="surface p-4">
         <div className="flex items-center gap-2"><span className="h-9 w-9 rounded-xl bg-[#25D366]/15 text-[#128C4B] grid place-items-center"><Camera size={18} /></span>
-          <div><div className="urdu font-bold !leading-[1.8]">پتے کی تصویر بھیجیں</div><div dir="ltr" className="text-[11px] text-muted text-right">WhatsApp door, analysed by a vision model</div></div></div>
-        <div className="flex flex-wrap gap-1.5 mt-3">{meta && Object.values(meta.crops).map((c: any) => <button key={c} onClick={() => setCrop(c)} className={`tag py-1.5 px-3 urdu !leading-normal text-[14px] ${crop === c ? 'bg-field-800 text-white' : 'bg-field-50 border border-line'}`}>{CROP_UR[c]}</button>)}</div>
-        <button disabled={busy} onClick={() => ref.current?.click()} className="btn btn-primary w-full mt-3">{busy ? <Spinner /> : <ImagePlus size={18} />} <span className="urdu !leading-normal">تصویر لیں یا چنیں</span></button>
+          <div><div className="urdu font-bold !leading-[1.8]">{L.sendPhoto}</div><div dir="ltr" className="text-[11px] text-muted text-right">WhatsApp door, analysed by a vision model</div></div></div>
+        <div className="flex flex-wrap gap-1.5 mt-3">{meta && Object.values(meta.crops).map((c: any) => <button key={c} onClick={() => setCrop(c)} className={`tag py-1.5 px-3 urdu !leading-normal text-[14px] ${crop === c ? 'bg-field-800 text-white' : 'bg-field-50 border border-line'}`}>{cropName(c)}</button>)}</div>
+        <button disabled={busy} onClick={() => ref.current?.click()} className="btn btn-primary w-full mt-3">{busy ? <Spinner /> : <ImagePlus size={18} />} <span className="urdu !leading-normal">{L.pick}</span></button>
         <input ref={ref} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && send(e.target.files[0])} />
       </div>
       {preview && <img src={preview} alt="Leaf" className="w-full max-h-64 object-cover rounded-2xl border border-line" />}
       {err && <div dir="ltr" className="text-sm rounded-xl bg-warn-50 text-warn px-3 py-2">{err}</div>}
       {res && <div className="surface p-4">
-        <div className={`tag mb-2 ${res.escalated ? 'bg-mustard-100 text-field-950' : 'bg-field-100 text-field-800'}`}>{res.escalated ? 'ماہر کو بھیج دیا گیا' : 'AI جواب'}</div>
+        <div className={`tag mb-2 ${res.escalated ? 'bg-ink/5 text-ink' : 'bg-field-100 text-field-800'}`}>{res.escalated ? L.toExpert : L.ai}</div>
         <div className="urdu text-[18px]">{res.answer_text}</div>
-        {res.vision?.description_ur && <div className="urdu text-sm text-muted mt-2">تصویر میں: {res.vision.description_ur}</div>}
+        {res.vision?.description_ur && <div className="urdu text-sm text-muted mt-2">{L.inPhoto} {res.vision.description_ur}</div>}
       </div>}
     </div>
   )
