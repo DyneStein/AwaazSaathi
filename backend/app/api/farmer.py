@@ -97,7 +97,7 @@ def _result(q: Query, engine: str = "", lang: str = "ur") -> dict:
 
 
 @r.post("/call/{call_id}/ask")
-def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript: str = Form(""),
+def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript: str = Form(""), category: str = Form(""),
         audio: UploadFile | None = File(None), db=Depends(get_db)):
     c = db.get(Call, call_id)
     if not c:
@@ -112,19 +112,21 @@ def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript
         (config.UPLOAD_DIR / name).write_bytes(data)
         audio_url = f"/uploads/{name}"
         if not transcript:
-            text, engine = stt.transcribe(data, name, audio.content_type or "audio/webm")
+            text, engine = stt.transcribe(data, name, audio.content_type or "audio/webm", crop)
             if not text:
                 return {"needs_text": True, "stt_engine": engine, "audio_url": audio_url}
             transcript = text
     if not transcript.strip():
         raise HTTPException(400, "empty question")
     q = trust_router.process(db, farmer=f, call_id=call_id, crop=crop, duration=duration,
-                             transcript=transcript.strip(), audio_url=audio_url)
+                             transcript=transcript.strip(), audio_url=audio_url, category=category or None)
     return _result(q, engine, c.language)
 
 
 @r.post("/call/{call_id}/photo")
-def photo(call_id: int, crop: str = Form(""), duration: str = Form(""), image: UploadFile = File(...), db=Depends(get_db)):
+def photo(call_id: int, crop: str = Form(""), duration: str = Form(""), category: str = Form(""), transcript: str = Form(""),
+          image: UploadFile = File(...), audio: UploadFile | None = File(None), db=Depends(get_db)):
+    """WhatsApp door: leaf photo + optional spoken/typed question + optional category."""
     c = db.get(Call, call_id)
     if not c:
         raise HTTPException(404)
@@ -133,17 +135,43 @@ def photo(call_id: int, crop: str = Form(""), duration: str = Form(""), image: U
     mime = image.content_type or "image/jpeg"
     name = f"photo{call_id}_{uuid.uuid4().hex[:8]}.{'png' if 'png' in mime else 'jpg'}"
     (config.UPLOAD_DIR / name).write_bytes(data)
-    tags = trust_router.known_tags(db)
-    v = llm.analyze_photo(data, mime, tags)
-    if not v:
+    audio_url, engine = None, "vision"
+    if audio is not None:
+        adata = audio.file.read()
+        aname = f"call{call_id}_{uuid.uuid4().hex[:8]}.webm"
+        (config.UPLOAD_DIR / aname).write_bytes(adata)
+        audio_url = f"/uploads/{aname}"
+        said, engine = stt.transcribe(adata, aname, audio.content_type or "audio/webm", crop)
+        transcript = (transcript + " " + (said or "")).strip()
+    v = llm.analyze_photo(data, mime, trust_router.known_tags(db))
+    desc = (v or {}).get("description_ur") or "، ".join((v or {}).get("symptoms_ur") or [])
+    question = " ".join(x for x in [transcript, f"(تصویر) {desc}" if desc else ""] if x).strip()
+    if not question:
         return {"needs_text": True, "photo_url": f"/uploads/{name}", "vision": None,
-                "message": "Photo analysis unavailable (offline or quota) - describe the problem instead."}
-    desc = v.get("description_ur") or "، ".join(v.get("symptoms_ur") or [])
-    q = trust_router.process(db, farmer=f, call_id=call_id, crop=crop or v.get("crop", ""), duration=duration,
-                             transcript=f"(تصویر) {desc}", channel="photo", photo_url=f"/uploads/{name}", vision=v)
-    res = _result(q, "vision", c.language)
+                "message": "Photo analysis is unavailable right now. Add a spoken or typed question and send again."}
+    q = trust_router.process(db, farmer=f, call_id=call_id, crop=crop or (v or {}).get("crop", ""), duration=duration,
+                             transcript=question, channel="photo", photo_url=f"/uploads/{name}", audio_url=audio_url,
+                             vision=v, category=category or None)
+    res = _result(q, engine, c.language)
     res["vision"] = v
     return res
+
+
+@r.post("/query/{qid}/to-expert")
+def to_expert(qid: int, db=Depends(get_db)):
+    """The farmer can always ask for a human agronomist, even after an AI answer."""
+    from datetime import timedelta
+    q = db.get(Query, qid)
+    if not q:
+        raise HTTPException(404)
+    if q.status in ("answered_ai", "approved"):
+        q.status, q.route, q.priority = "queued", q.route if q.route != "ai" else "junior", max(q.priority, 1)
+        q.reasons = list(q.reasons or []) + ["farmer_requested_expert"]
+        q.sla_due_at = now() + timedelta(hours=config.SLA_HOURS["normal"])
+        db.add(EventLog(kind="query", message=f"Farmer asked for a human expert on #{q.id}"))
+        db.commit()
+        hub.publish("expert", "new_query", {"id": q.id, "priority": q.priority, "route": q.route})
+    return {"ok": True, "status": q.status}
 
 
 class ConsentIn(BaseModel):

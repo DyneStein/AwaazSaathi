@@ -20,13 +20,16 @@ def local_available() -> bool:
     return bool(shutil.which(config.WHISPER_BIN)) and Path(config.WHISPER_MODEL).exists()
 
 
-def _local(audio: bytes) -> str:
+CROP_HINT = {"wheat": "گندم کنک", "cotton": "کپاس نرما", "rice": "مونجی چاول", "sugarcane": "کماد گنا", "maize": "مکئی"}
+
+
+def _local(audio: bytes, hint: str = HINT) -> str:
     with tempfile.TemporaryDirectory() as d:
         src, wav = os.path.join(d, "in.bin"), os.path.join(d, "in.wav")
         Path(src).write_bytes(audio)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-ar", "16000", "-ac", "1", wav], check=True, timeout=30)
         out = subprocess.run([config.WHISPER_BIN, "-m", config.WHISPER_MODEL, "-l", "ur", "-f", wav, "-nt", "-np",
-                              "--prompt", HINT], capture_output=True, text=True, timeout=60, check=True)
+                              "--prompt", hint], capture_output=True, text=True, timeout=60, check=True)
         return " ".join(out.stdout.split()).strip()
 
 
@@ -49,13 +52,14 @@ def _gemini(audio: bytes, mime: str) -> str:
     return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
-def transcribe(audio: bytes, filename: str = "q.webm", mime: str = "audio/webm") -> tuple[str | None, str]:
+def transcribe(audio: bytes, filename: str = "q.webm", mime: str = "audio/webm", crop: str = "") -> tuple[str | None, str]:
+    hint = HINT + (" " + CROP_HINT[crop] if crop in CROP_HINT else "")
     k = cache.key("stt", audio)
     hit = cache.get(k)
     if hit:
         return hit["text"], hit["engine"] + " (cached)"
     providers = {
-        "local": (local_available(), lambda: _local(audio), "whisper.cpp (on-device)"),
+        "local": (local_available(), lambda: _local(audio, hint), "whisper.cpp (on-device)"),
         "groq": (bool(config.GROQ_API_KEY) and not state.is_offline(), lambda: _groq(audio, filename, mime), "groq-whisper"),
         "gemini": (bool(config.GEMINI_API_KEY) and not state.is_offline(), lambda: _gemini(audio, mime), "gemini-audio"),
     }

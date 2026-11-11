@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Phone, PhoneOff, PhoneIncoming, Mic, Square, Inbox, Camera, ListChecks, Play, Pause, Send, AlertTriangle, ShieldCheck, Bot, UserRound, ImagePlus, Volume2, CheckCircle2 } from 'lucide-react'
+import { Phone, PhoneOff, PhoneIncoming, Mic, Square, RotateCcw, UserRoundCheck, Eye, CloudSun, ThumbsUp, Inbox, Camera, ListChecks, Play, Pause, Send, AlertTriangle, ShieldCheck, Bot, UserRound, ImagePlus, Volume2, CheckCircle2 } from 'lucide-react'
 import { api, post, timeAgo, CROP_EN, CROP_UR } from '../lib/api'
 import { beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
 import { useWS } from '../lib/ws'
@@ -11,8 +11,8 @@ type Step = 'idle' | 'connecting' | 'welcome' | 'notice' | 'tehsil' | 'tehsil_pi
 type Prompt = { text: string; audio_url: string | null }
 type Lang = 'ur' | 'pa'
 const UI = {
-  ur: { call: 'کال', inbox: 'جوابات', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان کا ساتھی', sub: 'اپنی فصل کا سوال پوچھیں، اپنی زبان میں', callNow: 'ہیلپ لائن پر کال کریں', connecting: 'کال مل رہی ہے…', fromKb: 'ماہرین کی منظور شدہ معلومات سے جواب', toExpert: 'ماہر کو بھیج دیا گیا', listening: 'سن رہے ہیں', thinking: 'سمجھ رہے ہیں', stopHint: 'بات ختم ہو تو دبائیں', recHint: 'دبائیں اور اپنا سوال بولیں', typeHere: 'یا یہاں لکھیں', incoming: 'آنے والی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ابھی کوئی جواب نہیں', stop: 'روکیں', listen: 'آواز میں سنیں', sendPhoto: 'پتے کی تصویر بھیجیں', pick: 'تصویر لیں یا چنیں', kept: 'ریکارڈنگ محفوظ کر لی گئی', deleted: 'ریکارڈنگ مٹا دی گئی', ai: 'AI جواب', inPhoto: 'تصویر میں:', lang: 'زبان' },
-  pa: { call: 'کال', inbox: 'جواب', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان دا ساتھی', sub: 'اپنی فصل دا سوال پچھو، اپنی بولی وچ', callNow: 'ہیلپ لائن تے کال کرو', connecting: 'کال مل رہی اے…', fromKb: 'ماہراں دی منظور شدہ معلومات توں جواب', toExpert: 'ماہر نوں گھل دتا گیا', listening: 'سن رہے آں', thinking: 'سمجھ رہے آں', stopHint: 'گل مکے تے دباؤ', recHint: 'دباؤ تے اپنا سوال بولو', typeHere: 'یا ایتھے لکھو', incoming: 'آندی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ہلے کوئی جواب نئیں', stop: 'روکو', listen: 'آواز وچ سنو', sendPhoto: 'پتے دی تصویر گھلو', pick: 'تصویر لوو یا چنو', kept: 'ریکارڈنگ محفوظ کر لئی گئی', deleted: 'ریکارڈنگ مٹا دتی گئی', ai: 'AI جواب', inPhoto: 'تصویر وچ:', lang: 'بولی' },
+  ur: { call: 'کال', inbox: 'جوابات', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان کا ساتھی', sub: 'اپنی فصل کا سوال پوچھیں، اپنی زبان میں', callNow: 'ہیلپ لائن پر کال کریں', connecting: 'کال مل رہی ہے…', fromKb: 'ماہرین کی منظور شدہ معلومات سے جواب', toExpert: 'ماہر کو بھیج دیا گیا', listening: 'سن رہے ہیں', thinking: 'سمجھ رہے ہیں', stopHint: 'بات ختم ہو تو دبائیں', recHint: 'دبائیں اور اپنا سوال بولیں', typeHere: 'یا یہاں لکھیں', incoming: 'آنے والی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ابھی کوئی جواب نہیں', stop: 'روکیں', listen: 'آواز میں سنیں', sendPhoto: 'پتے کی تصویر بھیجیں', pick: 'تصویر لیں یا چنیں', kept: 'ریکارڈنگ محفوظ کر لی گئی', deleted: 'ریکارڈنگ مٹا دی گئی', ai: 'AI جواب', inPhoto: 'تصویر میں:', lang: 'زبان', replay: 'جواب دوبارہ سنیں', rerecord: 'دوبارہ ریکارڈ', cats: { disease: 'بیماری', pest: 'کیڑا', nutrient: 'کھاد / کمی', weed: 'جڑی بوٹی' }, askAbout: 'تصویر کے بارے میں سوال بولیں', analyse: 'تصویر کا تجزیہ کریں', sees: 'AI کو تصویر میں نظر آیا', toExpertBtn: 'ماہر کو بھیجیں', sent: 'ماہر کو بھیج دیا گیا، وہ فون کرے گا', recorded: 'سوال ریکارڈ ہو گیا', followTitle: 'تین دن بعد خیریت کی کال', better: 'بہتر ہے', still: 'مسئلہ باقی ہے', thanks: 'شکریہ! خوشی ہوئی کہ فصل بہتر ہے', expertWill: 'ماہر آپ کو جلد فون کرے گا' },
+  pa: { call: 'کال', inbox: 'جواب', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان دا ساتھی', sub: 'اپنی فصل دا سوال پچھو، اپنی بولی وچ', callNow: 'ہیلپ لائن تے کال کرو', connecting: 'کال مل رہی اے…', fromKb: 'ماہراں دی منظور شدہ معلومات توں جواب', toExpert: 'ماہر نوں گھل دتا گیا', listening: 'سن رہے آں', thinking: 'سمجھ رہے آں', stopHint: 'گل مکے تے دباؤ', recHint: 'دباؤ تے اپنا سوال بولو', typeHere: 'یا ایتھے لکھو', incoming: 'آندی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ہلے کوئی جواب نئیں', stop: 'روکو', listen: 'آواز وچ سنو', sendPhoto: 'پتے دی تصویر گھلو', pick: 'تصویر لوو یا چنو', kept: 'ریکارڈنگ محفوظ کر لئی گئی', deleted: 'ریکارڈنگ مٹا دتی گئی', ai: 'AI جواب', inPhoto: 'تصویر وچ:', lang: 'بولی', replay: 'جواب دوبارہ سنو', rerecord: 'دوبارہ ریکارڈ', cats: { disease: 'بیماری', pest: 'کیڑا', nutrient: 'کھاد / کمی', weed: 'جڑی بوٹی' }, askAbout: 'تصویر بارے سوال بولو', analyse: 'تصویر دا جائزہ لوو', sees: 'AI نوں تصویر وچ دسیا', toExpertBtn: 'ماہر نوں گھلو', sent: 'ماہر نوں گھل دتا، اوہ فون کرے گا', recorded: 'سوال ریکارڈ ہو گیا', followTitle: 'تن دناں بعد خیریت دی کال', better: 'بہتر اے', still: 'مسئلہ ہلے وی اے', thanks: 'شکریہ! خوشی ہوئی کہ فصل بہتر اے', expertWill: 'ماہر تہانوں چھیتی فون کرے گا' },
 }
 let L = UI.ur
 const CROP_PA: Record<string, string> = { wheat: 'کنک', cotton: 'کپاہ', rice: 'مونجی', sugarcane: 'کماد', maize: 'مکئی' }
@@ -28,7 +28,7 @@ const EN: Record<string, string> = {
   duration: 'Since when? 1 under 3 days, 2 about a week, 3 longer.',
   ask: 'After the beep, describe the problem.',
   thinking: 'Understanding your question…',
-  more: '1 ask another question, 2 end the call.',
+  more: '1 new question, 2 end call, 3 hear the answer again, 4 record your question again.',
   consent: 'May we keep this recording to improve the service? 1 keep, 2 delete now.',
 }
 
@@ -47,9 +47,11 @@ export default function Farmer() {
   const [speaking, setSpeaking] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [typed, setTyped] = useState('')
+  const [category, setCategory] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [inbox, setInbox] = useState<any[]>([])
   const [incoming, setIncoming] = useState<any>(null)
+  const [followup, setFollowup] = useState<any>(null)
   const [playing, setPlaying] = useState<number | null>(null)
   const [offline, setOffline] = useState(false)
   const rec = useRecorder()
@@ -69,6 +71,7 @@ export default function Farmer() {
     if (m.event.startsWith('rtc_')) { video.onSignal(m.event, m.data); return }
     if (m.event === 'callback') { loadInbox(); if (['idle', 'ended'].includes(stepRef.current)) { setIncoming(m.data); beep(660, 400, 3) } }
     if (m.event === 'inbox') { loadInbox(); beep(520, 250, 2) }
+    if (m.event === 'followup') { loadInbox(); if (['idle', 'ended'].includes(stepRef.current)) { setFollowup({ ...m.data, stage: 'ringing' }); beep(660, 400, 3) } }
     if (m.event === 'reset') loadInbox()
     if (m.event === 'offline') setOffline(m.data.on)
   })
@@ -103,7 +106,7 @@ export default function Farmer() {
   }
   const submit = async (opts: { audio?: Blob; transcript?: string }) => {
     stopAudio(); go('thinking'); say('thinking')
-    const fd = new FormData(); fd.append('crop', crop); fd.append('duration', duration)
+    const fd = new FormData(); fd.append('crop', crop); fd.append('duration', duration); fd.append('category', category)
     if (opts.transcript) fd.append('transcript', opts.transcript)
     if (opts.audio) fd.append('audio', opts.audio, 'question.webm')
     try {
@@ -116,6 +119,7 @@ export default function Farmer() {
   const press = async (d: string) => {
     if (['idle', 'ended', 'connecting', 'thinking'].includes(step)) return
     beep(1200 + Number(d) * 40, 70); stopAudio(); setSpeaking(false)
+    if (step === 'answer' || step === 'escalated') { go('more'); return }
     if (step === 'welcome' && (d === '1' || d === '2')) { const l: Lang = d === '1' ? 'pa' : 'ur'; const p = await api(`/api/prompts?lang=${l}`); setPrompts(p); setLang(l); post(`/api/call/${call.call_id}/language`, { language: l }); go('notice') }
     else if (step === 'notice') go(call?.known ? 'tehsil' : 'tehsil_pick')
     else if (step === 'tehsil') { if (d === '1') go('crop'); else if (d === '2') go('tehsil_pick') }
@@ -125,7 +129,12 @@ export default function Farmer() {
     }
     else if (step === 'crop' && meta?.crops[d]) { setCrop(meta.crops[d]); go('duration') }
     else if (step === 'duration' && meta?.durations[d]) { setDuration(meta.durations[d]); go('ask') }
-    else if (step === 'more') { if (d === '1') { setResult(null); go('ask') } else if (d === '2') go('consent') }
+    else if (step === 'more') {
+      if (d === '1') { setResult(null); setCategory(''); go('ask') }
+      else if (d === '2') go('consent')
+      else if (d === '3' && result) { setSpeaking(true); await speak(result.answer_audio, result.answer_text); setSpeaking(false); say('more') }
+      else if (d === '4') { setResult(null); go('ask') }
+    }
     else if (step === 'consent' && (d === '1' || d === '2')) {
       const keep = d === '1'
       await post(`/api/call/${call.call_id}/consent`, { keep })
@@ -174,11 +183,12 @@ export default function Farmer() {
       aside={<Pipeline result={result} step={step} />}
       overlay={<>
         {incoming && <IncomingCallback by={incoming.by} onAccept={acceptIncoming} onDecline={() => setIncoming(null)} />}
+        {followup && <FollowupCall f={followup} setF={setFollowup} />}
         <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
       </>}>
       {tab === 'call' && (inCall ? (
         <InCall step={step} prompts={prompts} call={call} lang={lang} crop={crop} meta={meta} result={result} speaking={speaking} rec={rec}
-          note={note} typed={typed} setTyped={setTyped} onPress={press} onRec={toggleRec} onSubmit={submit} onEnd={endCall} />
+          note={note} typed={typed} setTyped={setTyped} category={category} setCategory={setCategory} onPress={press} onRec={toggleRec} onSubmit={submit} onEnd={endCall} />
       ) : (
         <div className="flex flex-col items-center px-6 pt-10 pb-8 gap-6 text-center">
           <img src="/icon.svg" className="h-20 w-20 rounded-[22px] shadow-lg" alt="" />
@@ -205,7 +215,7 @@ export default function Farmer() {
   )
 }
 
-function InCall({ step, prompts, call, lang, crop, meta, result, speaking, rec, note, typed, setTyped, onPress, onRec, onSubmit, onEnd }: any) {
+function InCall({ step, prompts, call, lang, crop, meta, result, speaking, rec, note, typed, setTyped, category, setCategory, onPress, onRec, onSubmit, onEnd }: any) {
   const pk: Record<string, string> = { welcome: 'welcome', notice: 'ai_notice', tehsil: 'tehsil_confirm', tehsil_pick: 'tehsil_pick', crop: 'crop', duration: 'duration', ask: 'ask', thinking: 'thinking', more: 'more', consent: 'consent' }
   const key = pk[step]
   return (
@@ -241,6 +251,7 @@ function InCall({ step, prompts, call, lang, crop, meta, result, speaking, rec, 
 
       {step === 'ask' ? (
         <div className="flex flex-col items-center gap-3">
+          <Categories value={category} onChange={setCategory} />
           <button onClick={onRec} aria-label={rec.recording ? 'Stop and send' : 'Record question'} className={`h-24 w-24 rounded-full grid place-items-center shadow-xl ${rec.recording ? 'bg-danger ring-pulse' : 'bg-field-700 text-white hover:bg-field-800'}`}>{rec.recording ? <Square size={32} fill="currentColor" /> : <Mic size={40} />}</button>
           <div className="urdu text-muted !text-center !leading-[1.8]">{rec.recording ? L.stopHint : L.recHint}</div>
           {(rec.error || note) && <div dir="ltr" className="text-xs rounded-lg bg-warn-50 text-warn px-3 py-2 w-full flex gap-2"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{rec.error || note}</div>}
@@ -255,7 +266,10 @@ function InCall({ step, prompts, call, lang, crop, meta, result, speaking, rec, 
             </div>
           </div>
         </div>
-      ) : <Keypad onPress={onPress} active={['welcome', 'notice', 'tehsil', 'tehsil_pick', 'crop', 'duration', 'more', 'consent'].includes(step)} />}
+      ) : <>
+        {step === 'more' && result && <div className="flex gap-2 mt-1"><button onClick={() => onPress('3')} className="btn btn-quiet flex-1 !py-2 text-sm"><RotateCcw size={16} /> <span className="urdu !leading-normal">{L.replay}</span></button><button onClick={() => onPress('4')} className="btn btn-quiet flex-1 !py-2 text-sm"><Mic size={16} /> <span className="urdu !leading-normal">{L.rerecord}</span></button></div>}
+        <Keypad onPress={onPress} active={['welcome', 'notice', 'tehsil', 'tehsil_pick', 'crop', 'duration', 'more', 'consent', 'answer', 'escalated'].includes(step)} />
+      </>}
       <button onClick={onEnd} aria-label="End call" className="mt-auto pt-4 mx-auto"><span className="h-14 w-14 rounded-full bg-danger text-white grid place-items-center"><PhoneOff size={24} /></span></button>
     </div>
   )
@@ -284,16 +298,41 @@ function IncomingCallback({ by, onAccept, onDecline }: { by: string; onAccept: (
   )
 }
 
+function FollowupCall({ f, setF }: { f: any; setF: (v: any) => void }) {
+  const accept = async () => { setF({ ...f, stage: 'talking' }); await speak(f.audio_url, f.text); setF((x: any) => x && { ...x, stage: 'answer' }) }
+  const reply = async (better: boolean) => {
+    if (!better) await post(`/api/query/${f.query_id}/to-expert`)
+    setF({ ...f, stage: better ? 'thanks' : 'expert' }); setTimeout(() => setF(null), 2500)
+  }
+  return (
+    <div className="absolute inset-0 z-30 bg-white text-ink flex flex-col items-center justify-center gap-6 px-6 text-center drop-in">
+      <div className="urdu text-muted !text-center">{L.followTitle}</div>
+      <div className={`h-24 w-24 rounded-full bg-field-700 text-white grid place-items-center ${f.stage === 'ringing' ? 'ring-pulse' : ''}`}>{f.stage === 'thanks' ? <ThumbsUp size={38} /> : <RotateCcw size={38} />}</div>
+      <div className="urdu text-[22px] font-bold !text-center !leading-[1.9]">{L.expert}</div>
+      {f.stage === 'ringing' && <div className="flex gap-14">
+        <button onClick={() => setF(null)} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger text-white grid place-items-center"><PhoneOff /></button>
+        <button onClick={accept} aria-label="Accept" className="h-16 w-16 rounded-full bg-field-700 text-white grid place-items-center"><Phone /></button></div>}
+      {f.stage === 'talking' && <div className="urdu text-[17px] !text-center">{f.text}</div>}
+      {f.stage === 'answer' && <div className="w-full space-y-2">
+        <button onClick={() => reply(true)} className="btn btn-primary w-full"><b>1</b> <span className="urdu !leading-normal">{L.better}</span></button>
+        <button onClick={() => reply(false)} className="btn btn-quiet w-full"><b>2</b> <span className="urdu !leading-normal">{L.still}</span></button></div>}
+      {f.stage === 'thanks' && <div className="urdu text-lg !text-center">{L.thanks}</div>}
+      {f.stage === 'expert' && <div className="urdu text-lg !text-center">{L.expertWill}</div>}
+    </div>
+  )
+}
+
 function InboxList({ items, playing, onPlay }: { items: any[]; playing: number | null; onPlay: (it: any) => void }) {
   if (!items.length) return <Empty icon={Inbox} title={L.noInbox}><span dir="ltr">Expert answers and outbreak alerts arrive here as voice messages.</span></Empty>
   return (
     <ul className="p-4 space-y-3">
       {items.map((it) => {
         const alert = it.kind === 'outbreak_alert'
+        const follow = it.kind === 'followup'
         return (
           <li key={it.id} className={`surface p-4 ${alert ? 'border-danger/30' : ''}`}>
             <div className="flex items-center gap-2">
-              <span className={`h-9 w-9 rounded-xl grid place-items-center ${alert ? 'bg-danger-50 text-danger' : 'bg-field-100 text-field-800'}`}>{alert ? <AlertTriangle size={18} /> : <UserRound size={18} />}</span>
+              <span className={`h-9 w-9 rounded-xl grid place-items-center ${alert ? 'bg-danger-50 text-danger' : 'bg-field-100 text-field-800'}`}>{alert ? <AlertTriangle size={18} /> : follow ? <RotateCcw size={18} /> : <UserRound size={18} />}</span>
               <div className="flex-1"><div className="urdu font-bold !leading-[1.8]">{it.title_ur}</div><div dir="ltr" className="text-[11px] text-muted text-right">{timeAgo(it.created_at)}</div></div>
               {!it.heard && <span className="h-2.5 w-2.5 rounded-full bg-mustard" />}
             </div>
@@ -306,37 +345,69 @@ function InboxList({ items, playing, onPlay }: { items: any[]; playing: number |
   )
 }
 
+function Categories({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="w-full flex gap-1.5 overflow-x-auto no-scrollbar">
+      {Object.entries(L.cats).map(([k, v]) => <button key={k} onClick={() => onChange(value === k ? '' : k)} className={`tag shrink-0 py-1 px-2.5 urdu !leading-normal text-[13px] ${value === k ? 'bg-field-800 text-white' : 'bg-white border border-line text-ink'}`}>{v}</button>)}
+    </div>
+  )
+}
+
 function PhotoDoor({ meta, phone, lang, onResult }: { meta: any; phone: string; lang: string; onResult: (r: any) => void }) {
   const [crop, setCrop] = useState('wheat')
+  const [category, setCategory] = useState('disease')
+  const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [voice, setVoice] = useState<Blob | null>(null)
+  const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<any>(null)
+  const [sent, setSent] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const rec = useRecorder()
   const ref = useRef<HTMLInputElement>(null)
-  const send = async (f: File) => {
-    setPreview(URL.createObjectURL(f)); setBusy(true); setErr(null); setRes(null)
+  const pick = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); setRes(null); setSent(false); setErr(null) }
+  const toggleRec = async () => { if (rec.recording) setVoice(await rec.stop()); else { setVoice(null); await rec.start() } }
+  const analyse = async () => {
+    if (!file) return
+    setBusy(true); setErr(null); setRes(null); setSent(false)
     try {
       const c = await post('/api/call/start', { phone, language: lang })
-      const fd = new FormData(); fd.append('crop', crop); fd.append('image', f)
+      const fd = new FormData(); fd.append('crop', crop); fd.append('category', category); fd.append('image', file); fd.append('transcript', text)
+      if (voice) fd.append('audio', voice, 'question.webm')
       const r = await api(`/api/call/${c.call_id}/photo`, { method: 'POST', body: fd })
-      if (r.needs_text) setErr(r.message); else { setRes(r); onResult(r) }
+      if (r.needs_text) setErr(r.message); else { setRes(r); setSent(r.escalated); onResult(r) }
     } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
   }
+  const toExpert = async () => { await post(`/api/query/${res.query.id}/to-expert`); setSent(true) }
   return (
-    <div className="p-4 space-y-4">
-      <div className="surface p-4">
-        <div className="flex items-center gap-2"><span className="h-9 w-9 rounded-xl bg-[#25D366]/15 text-[#128C4B] grid place-items-center"><Camera size={18} /></span>
-          <div><div className="urdu font-bold !leading-[1.8]">{L.sendPhoto}</div><div dir="ltr" className="text-[11px] text-muted text-right">WhatsApp door, analysed by a vision model</div></div></div>
-        <div className="flex flex-wrap gap-1.5 mt-3">{meta && Object.values(meta.crops).map((c: any) => <button key={c} onClick={() => setCrop(c)} className={`tag py-1.5 px-3 urdu !leading-normal text-[14px] ${crop === c ? 'bg-field-800 text-white' : 'bg-field-50 border border-line'}`}>{cropName(c)}</button>)}</div>
-        <button disabled={busy} onClick={() => ref.current?.click()} className="btn btn-primary w-full mt-3">{busy ? <Spinner /> : <ImagePlus size={18} />} <span className="urdu !leading-normal">{L.pick}</span></button>
-        <input ref={ref} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && send(e.target.files[0])} />
+    <div className="p-4 space-y-3">
+      <div className="surface p-4 space-y-3">
+        <div className="flex items-center gap-2"><span className="h-9 w-9 rounded-xl bg-field-50 text-field-700 border border-line grid place-items-center"><Camera size={18} /></span>
+          <div><div className="urdu font-bold !leading-[1.8]">{L.sendPhoto}</div><div dir="ltr" className="text-[11px] text-muted text-right">WhatsApp door, analysed on-device</div></div></div>
+        <Categories value={category} onChange={setCategory} />
+        <div className="flex flex-wrap gap-1.5">{meta && Object.values(meta.crops).map((c: any) => <button key={c} onClick={() => setCrop(c)} className={`tag py-1.5 px-3 urdu !leading-normal text-[14px] ${crop === c ? 'bg-field-800 text-white' : 'bg-field-50 border border-line'}`}>{cropName(c)}</button>)}</div>
+        {preview ? <button onClick={() => ref.current?.click()} className="block w-full"><img src={preview} alt="Leaf" className="w-full max-h-52 object-cover rounded-xl border border-line" /></button>
+          : <button onClick={() => ref.current?.click()} className="btn btn-quiet w-full !py-6 flex-col"><ImagePlus size={26} /><span className="urdu !leading-normal">{L.pick}</span></button>}
+        <input ref={ref} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+        <div className="flex items-center gap-2">
+          <button onClick={toggleRec} className={`btn shrink-0 ${rec.recording ? 'btn-danger' : 'btn-quiet'}`}>{rec.recording ? <Square size={15} fill="currentColor" /> : <Mic size={17} />}</button>
+          <span className="urdu text-[14px] !leading-normal text-muted flex-1">{rec.recording ? L.listening : voice ? L.recorded : L.askAbout}</span>
+          {voice && <button onClick={() => speak(URL.createObjectURL(voice), '')} aria-label="Play recording" className="btn btn-quiet !px-2.5"><Play size={16} /></button>}
+        </div>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L.typeHere} className="field urdu !leading-normal" />
+        <button disabled={busy || !file || rec.recording} onClick={analyse} className="btn btn-primary w-full">{busy ? <Spinner /> : <Eye size={18} />} <span className="urdu !leading-normal">{L.analyse}</span></button>
+        {busy && <div dir="ltr" className="text-xs text-muted text-center">Analysing the photo on this device, about 10 to 20 seconds</div>}
       </div>
-      {preview && <img src={preview} alt="Leaf" className="w-full max-h-64 object-cover rounded-2xl border border-line" />}
       {err && <div dir="ltr" className="text-sm rounded-xl bg-warn-50 text-warn px-3 py-2">{err}</div>}
-      {res && <div className="surface p-4">
-        <div className={`tag mb-2 ${res.escalated ? 'bg-ink/5 text-ink' : 'bg-field-100 text-field-800'}`}>{res.escalated ? L.toExpert : L.ai}</div>
-        <div className="urdu text-[18px]">{res.answer_text}</div>
-        {res.vision?.description_ur && <div className="urdu text-sm text-muted mt-2">{L.inPhoto} {res.vision.description_ur}</div>}
+      {res && <div className="surface p-4 space-y-3">
+        {res.vision?.description_ur && <div><div className="text-xs text-muted urdu !leading-normal">{L.sees}</div><div className="urdu text-[16px]">{res.vision.description_ur}</div></div>}
+        {!res.escalated && <div className="border-t border-line pt-3"><div className="tag bg-field-100 text-field-800 mb-1"><ShieldCheck size={13} /> <span className="urdu !leading-normal">{L.fromKb}</span></div><div className="urdu text-[17px]">{res.answer_text}</div></div>}
+        <div className="flex gap-2">
+          <button onClick={() => speak(res.answer_audio, res.answer_text)} className="btn btn-quiet flex-1"><Volume2 size={17} /> <span className="urdu !leading-normal">{L.listen}</span></button>
+          {sent ? <span className="tag bg-ink/5 text-ink flex-1 justify-center urdu !leading-normal"><UserRoundCheck size={14} /> {L.sent}</span>
+            : <button onClick={toExpert} className="btn btn-primary flex-1"><UserRound size={17} /> <span className="urdu !leading-normal">{L.toExpertBtn}</span></button>}
+        </div>
       </div>}
     </div>
   )
@@ -374,6 +445,7 @@ function Pipeline({ result, step }: { result: any; step: Step }) {
           <div><div className="text-xs text-muted mb-1">Sources retrieved</div>
             <ul className="divide-y divide-line">{q.retrieved.map((r: any) => <li key={r.kb_id} className="flex items-center justify-between gap-3 py-1.5"><span className="text-xs text-muted">{r.score.toFixed(2)}</span><span className="urdu !leading-[1.9] text-[15px]">{r.title_ur}</span></li>)}</ul>
           </div>
+          {q.understanding?.weather?.temp_c !== undefined && <div className="rounded-xl border border-line bg-field-50 px-3 py-2 text-sm flex items-center gap-2"><CloudSun size={16} className="text-field-700" /> Weather in {q.tehsil}: {Math.round(q.understanding.weather.temp_c)}°C, humidity {q.understanding.weather.humidity}%, rain chance {q.understanding.weather.rain_chance ?? 0}%. Added to the spoken advice.</div>}
           <div className="text-xs text-muted">Crop: {CROP_EN[q.crop] || '—'}. Tehsil: {q.tehsil}.</div>
         </div>)}
     </div>
