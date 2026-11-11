@@ -210,6 +210,7 @@ function Detail({ q, me, onDone, onCall }: { q: any; me: any; onDone: (m: string
         {q.photo_url && <img src={q.photo_url} className="mt-2 w-full max-h-56 object-cover rounded-xl border border-line" alt="Leaf" />}
         <button onClick={onCall} className="btn btn-quiet w-full mt-3"><Video size={18} /> Video call farmer (WhatsApp)</button>
       </section>
+      {q.understanding?.weather?.temp_c !== undefined && <div className="surface px-4 py-3 text-sm text-muted">Weather in {q.tehsil} now: {Math.round(q.understanding.weather.temp_c)}°C, humidity {q.understanding.weather.humidity}%, rain chance {q.understanding.weather.rain_chance ?? 0}%</div>}
       <Section title="Why the AI did not answer"><Reasons reasons={q.reasons} /><div className="mt-3"><Meter label="Retrieval confidence" value={q.retrieval_score} min={0.3} /></div></Section>
       <Section title="AI's attempted answer (not sent)">{q.ai_answer ? <div className="urdu text-[16px]">{q.ai_answer}</div> : <div className="text-sm text-muted">No confident answer was found.</div>}
         {!!q.retrieved?.length && <ul className="mt-2 divide-y divide-line border-t border-line">{q.retrieved.map((r: any) => <li key={r.kb_id} className="flex justify-between items-center py-1.5"><span className="text-xs text-muted">{r.score.toFixed(2)}</span><span className="urdu text-[14px] !leading-[1.9]">{r.title_ur}</span></li>)}</ul>}

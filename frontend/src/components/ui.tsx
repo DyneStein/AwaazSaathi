@@ -15,14 +15,14 @@ export function AppShell({ header, tabs, active, onTab, children, aside, overlay
   header: ReactNode; tabs?: Tab[]; active?: string; onTab?: (k: string) => void; children: ReactNode; aside?: ReactNode; overlay?: ReactNode; dir?: 'rtl' | 'ltr'
 }) {
   return (
-    <div className="min-h-[100dvh] lg:py-8 lg:flex lg:justify-center lg:items-start lg:gap-8">
-      <div dir={dir} className="relative mx-auto lg:mx-0 flex flex-col bg-canvas w-full max-w-[440px] h-[100dvh] lg:h-[860px] lg:rounded-[32px] lg:border lg:border-line lg:shadow-[0_20px_60px_-20px_rgba(16,40,28,.25)] overflow-hidden">
+    <div className="min-h-[100dvh] lg:py-5 lg:flex lg:justify-center lg:items-start lg:gap-8">
+      <div dir={dir} className="relative mx-auto lg:mx-0 flex flex-col bg-canvas w-full max-w-[440px] lg:max-w-[390px] h-[100dvh] lg:h-[min(760px,calc(100dvh-40px))] lg:rounded-[44px] lg:border-[11px] lg:border-ink lg:shadow-[0_24px_60px_-18px_rgba(16,40,28,.35)] overflow-hidden">
         {header}
         <main className="flex-1 overflow-y-auto no-scrollbar">{children}</main>
         {tabs && <TabBar tabs={tabs} active={active!} onTab={onTab!} />}
         {overlay}
       </div>
-      {aside && <div className="hidden lg:block w-[480px] max-h-[860px] overflow-y-auto no-scrollbar">{aside}</div>}
+      {aside && <div className="hidden lg:block w-[460px] max-h-[min(760px,calc(100dvh-40px))] overflow-y-auto no-scrollbar">{aside}</div>}
     </div>
   )
 }
@@ -109,7 +109,7 @@ export function Meter({ value, min, label }: { value: number; min?: number; labe
 const REASON: Record<string, string> = {
   low_retrieval: 'Not covered by knowledge base', not_grounded: 'Answer not supported by sources',
   dose_question: 'Asks for a dose', banned_chemical: 'Banned chemical named',
-  suspected_outbreak: 'Possible outbreak', senior_only_topic: 'Senior-only topic',
+  suspected_outbreak: 'Possible outbreak', senior_only_topic: 'Senior-only topic', farmer_requested_expert: 'Farmer asked for an expert',
 }
 export function Reasons({ reasons }: { reasons: string[] }) {
   if (!reasons?.length) return <span className="tag bg-field-100 text-field-800"><CheckCircle2 size={13} /> All safety checks passed</span>

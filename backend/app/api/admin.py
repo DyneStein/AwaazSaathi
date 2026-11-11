@@ -118,6 +118,27 @@ async def outbreak_scenario():
     return {"ok": True, "results": results}
 
 
+@r.post("/followups")
+def followups(db=Depends(get_db)):
+    """Demo trigger for the 3-day follow-up call: every farmer answered recently gets a voice check-in."""
+    from ..models import InboxItem
+    from ..pipeline import tts
+    since = now() - timedelta(days=7)
+    latest: dict[int, Query] = {}
+    for q in db.query(Query).filter(Query.status.in_(["answered_ai", "approved"]), Query.answered_at >= since).order_by(Query.id):
+        latest[q.farmer_id] = q
+    crop_ur = {"wheat": "گندم", "cotton": "کپاس", "rice": "مونجی", "sugarcane": "کماد", "maize": "مکئی"}
+    for q in latest.values():
+        text = (f"السلام علیکم، آواز ساتھی سے بات ہو رہی ہے۔ تین دن پہلے آپ نے اپنی {crop_ur.get(q.crop, 'فصل')} کے بارے میں پوچھا تھا۔ "
+                "کیا اب فرق پڑا ہے؟ بہتر ہو تو ایک دبائیں۔ مسئلہ باقی ہو تو دو دبائیں، ہمارا ماہر آپ کو فون کرے گا۔")
+        audio = tts.speak(text)
+        db.add(InboxItem(farmer_id=q.farmer_id, kind="followup", title_ur="تین دن بعد خیریت کی کال", text_ur=text, audio_url=audio, query_id=q.id))
+        hub.publish(f"farmer:{q.farmer_id}", "followup", {"query_id": q.id, "text": text, "audio_url": audio})
+    db.add(EventLog(kind="followup", message=f"3-day follow-up calls placed to {len(latest)} farmers"))
+    db.commit()
+    return {"ok": True, "count": len(latest)}
+
+
 @r.post("/sla-fast-forward")
 def sla_ff(db=Depends(get_db)):
     """Demo helper: pretend 3 hours passed for every open query, then run the SLA sweep."""

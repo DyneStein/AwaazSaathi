@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { RotateCcw, AlertTriangle, FastForward, WifiOff, Wifi, Play, Phone, Stethoscope, Store, Activity, ShieldCheck, Cpu, KeyRound } from 'lucide-react'
+import { RotateCcw, AlertTriangle, FastForward, PhoneForwarded, WifiOff, Wifi, Play, Phone, Stethoscope, Store, Activity, ShieldCheck, Cpu, KeyRound } from 'lucide-react'
 import { api, post, timeAgo } from '../lib/api'
 import { useWS } from '../lib/ws'
 import { LevelBadge, LiveDot, Logo, Spinner } from '../components/ui'
@@ -37,6 +37,7 @@ export default function Admin() {
             <div className="flex flex-wrap items-center gap-2">
               <Btn k="reset" icon={RotateCcw} cls="btn-primary" onClick={() => confirm('Reset all demo data?') && run('reset', () => post('/api/admin/reset'), () => 'Demo data reset')}>Reset demo</Btn>
               <Btn k="ob" icon={AlertTriangle} cls="btn-accent" onClick={() => run('ob', () => post('/api/admin/outbreak-scenario'), () => 'Two more Okara yellow-rust reports sent')}>Trigger outbreak</Btn>
+              <Btn k="fu" icon={PhoneForwarded} onClick={() => run('fu', () => post('/api/admin/followups'), (r) => `3-day follow-up calls placed to ${r.count} farmers`)}>3-day follow-up calls</Btn>
               <Btn k="sla" icon={FastForward} onClick={() => run('sla', () => post('/api/admin/sla-fast-forward'), (r) => `Moved 3 hours ahead: ${r.escalated} questions re-routed to another senior`)}>Skip 3 hours</Btn>
               <button onClick={() => run('off', () => post('/api/admin/offline', { on: !h?.offline }), (r) => r.offline ? 'Offline: cached voice and on-device rules only' : 'Back online')} className={`btn text-sm ml-auto ${h?.offline ? 'bg-warn-50 text-warn border border-warn/30' : 'btn-quiet'}`}>{h?.offline ? <WifiOff size={16} /> : <Wifi size={16} />}{h?.offline ? 'Offline mode on' : 'Online'}</button>
             </div>
