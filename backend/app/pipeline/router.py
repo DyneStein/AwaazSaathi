@@ -13,13 +13,15 @@ def known_tags(db) -> list[str]:
 
 def process(db, *, farmer: Farmer, call_id: int | None, crop: str, duration: str, transcript: str,
             channel: str = "voice", photo_url: str | None = None, audio_url: str | None = None,
-            vision: dict | None = None) -> Query:
+            vision: dict | None = None, category: str | None = None) -> Query:
     tags = known_tags(db)
-    und = llm.understand(transcript, crop, duration, tags) or {}
+    und = llm.understand(transcript + (f" (category: {category})" if category else ""), crop, duration, tags) or {}
     normalized = und.get("normalized_query_ur") or transcript
     search_text = " ".join([transcript, normalized, " ".join(und.get("symptoms_ur") or []),
                             (vision or {}).get("description_ur", ""), " ".join((vision or {}).get("symptoms_ur") or [])])
-    hits = retrieval.index.search(search_text, crop=crop or und.get("crop"))
+    if category:
+        search_text += " " + retrieval.CATEGORY_WORDS.get(category, "")
+    hits = retrieval.index.search(search_text, crop=crop or und.get("crop"), category=category)
     top, top_score = (hits[0] if hits else (None, 0.0))
 
     answer, grounding = "", 0.0
@@ -39,8 +41,10 @@ def process(db, *, farmer: Farmer, call_id: int | None, crop: str, duration: str
     d = nil_detection.decide(
         transcript=transcript, retrieval_score=top_score, grounding=grounding,
         top_senior_only=bool(top and top.senior_only and top_score >= config.RETRIEVAL_MIN),
-        llm_asks_dose=bool(und.get("asks_dose")), llm_chemicals=und.get("chemicals") or [],
-        llm_spread=bool(und.get("spread")), prior_similar_cases=prior)
+        # Escalation is decided by explicit keyword rules only. The small local LLM's yes/no flags proved unreliable
+        # (it marked simple questions as "spreading"), so they are recorded for experts but never trigger escalation.
+        llm_asks_dose=False, llm_chemicals=und.get("chemicals") or [],
+        llm_spread=False, prior_similar_cases=prior)
 
     q = Query(call_id=call_id, farmer_id=farmer.id, tehsil=farmer.tehsil, crop=crop or und.get("crop") or "",
               duration=duration, channel=channel, transcript=transcript, normalized_query=normalized,
@@ -50,10 +54,14 @@ def process(db, *, farmer: Farmer, call_id: int | None, crop: str, duration: str
                           "senior_only": h.senior_only} for h, s in hits],
               retrieval_score=round(top_score, 3), grounding=round(grounding, 3), route=d.route, reasons=d.reasons)
 
+    w = outbreak.weather(farmer.tehsil)
+    q.understanding = {**(q.understanding or {}), "weather": w}
     if not d.escalate:
         q.status, q.answered_by, q.answered_at = "answered_ai", "AI", now()
-        q.final_answer = answer
-        q.final_audio_url = tts.speak(answer)
+        tip = outbreak.weather_advice(w)  # weather-aware: added after the grounding check, from live forecast rules
+        q.final_answer = answer + (" " + tip if tip else "")
+        answer = q.final_answer
+        q.final_audio_url = tts.speak(q.final_answer)
     else:
         q.status = "queued"
         outbreak_suspect = any(r.startswith("suspected_outbreak") for r in d.reasons)

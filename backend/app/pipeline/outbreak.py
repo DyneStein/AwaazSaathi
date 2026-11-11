@@ -70,16 +70,32 @@ def weather(tehsil: str) -> dict:
     try:
         r = httpx.get("https://api.open-meteo.com/v1/forecast", params={
             "latitude": t["lat"], "longitude": t["lon"],
-            "current": "temperature_2m,relative_humidity_2m,precipitation"}, timeout=5)
+            "current": "temperature_2m,relative_humidity_2m,precipitation",
+            "daily": "precipitation_probability_max", "forecast_days": 2, "timezone": "Asia/Karachi"}, timeout=5)
         r.raise_for_status()
         c = r.json()["current"]
-        w = {"temp_c": c["temperature_2m"], "humidity": c["relative_humidity_2m"], "rain_mm": c["precipitation"]}
+        rain = r.json().get("daily", {}).get("precipitation_probability_max") or [0]
+        w = {"temp_c": c["temperature_2m"], "humidity": c["relative_humidity_2m"], "rain_mm": c["precipitation"],
+             "rain_chance": max(x or 0 for x in rain)}
         cache.put(k, w)
         state.mark("weather", True, "open-meteo", int((time.time() - t0) * 1000))
         return w
     except Exception as e:  # noqa: BLE001
         state.mark("weather", False, str(e))
         return {}
+
+
+def weather_advice(w: dict) -> str:
+    """One spoken Urdu sentence that makes the advice weather-aware (rules, not the LLM)."""
+    if not w:
+        return ""
+    if w.get("rain_chance", 0) >= 50 or w.get("rain_mm", 0) > 0.5:
+        return f"موسم: اگلے ایک دو دن آپ کے علاقے میں بارش کا امکان {w.get('rain_chance', 0)} فیصد ہے، اس لیے ابھی سپرے نہ کریں، بارش کے بعد کریں۔"
+    if w.get("humidity", 0) >= 75:
+        return f"موسم: آپ کے علاقے میں نمی {w['humidity']} فیصد ہے، ایسے موسم میں بیماریاں تیزی سے پھیلتی ہیں، کھیت روزانہ دیکھیں۔"
+    if w.get("temp_c", 0) >= 36:
+        return f"موسم: گرمی {round(w['temp_c'])} ڈگری ہے، سپرے صرف صبح سویرے یا شام کو کریں۔"
+    return f"موسم: آج آپ کے علاقے میں موسم صاف ہے، درجہ حرارت {round(w.get('temp_c', 0))} ڈگری ہے۔ سپرے کرنا ہو تو ہوا کم ہونے پر صبح یا شام کریں۔"
 
 
 def disease_name_ur(db, tag: str) -> str:
