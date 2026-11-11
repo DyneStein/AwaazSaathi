@@ -29,7 +29,7 @@ def _edge(text: str, out) -> None:
     import edge_tts
 
     async def go():
-        await edge_tts.Communicate(text, config.EDGE_TTS_VOICE, rate="-8%").save(str(out))
+        await asyncio.wait_for(edge_tts.Communicate(text, config.EDGE_TTS_VOICE, rate="-8%").save(str(out)), timeout=25)
     asyncio.run(go())
 
 
