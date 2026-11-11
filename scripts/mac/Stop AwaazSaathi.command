@@ -7,6 +7,6 @@ OLLAMA=$(command -v ollama || echo /opt/homebrew/bin/ollama)
 "$OLLAMA" stop gemma3:4b >/dev/null 2>&1
 brew services stop ollama >/dev/null 2>&1 || pkill -x ollama
 echo "  AI model stopped"
-pgrep -x caffeinate >/dev/null || (nohup caffeinate -dis >/dev/null 2>&1 &)
+pgrep -f "caffeinate -dis" >/dev/null || (nohup caffeinate -dis >/dev/null 2>&1 &)
 echo "  Mac stays awake (no sleep)"
 echo "Done. You can close this window."
