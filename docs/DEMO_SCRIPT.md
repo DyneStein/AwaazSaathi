@@ -1,16 +1,56 @@
-# 5-minute demo script (one Mac + one Android phone)
+# Live demo: exact flow (about 5 minutes)
 
-**Setup (before you walk up):** `./scripts/start.sh` is running. Three Chrome windows are side by side on the Mac: **/farmer** (left), **/expert** (right, narrow), **/admin** (hidden behind them). The Android phone shows **/dealer**, logged in as Aslam Zarai Markaz (PIN 1111), with **Turn on alert sound and vibration** tapped. Press **Reset demo** in /admin.
+**Before you start:** Admin tab → **Reset demo**. The Farmer tab shows the green call button. The Expert tab is on the sign-in list. The dealer phone is logged in (PIN 1111) with alerts turned on.
 
-| Time | Screen | Do | Say |
-|---|---|---|---|
-| 0:00 | Farmer | Tap the green call button → **1** (Punjabi) → **1** → **1** wheat → **1** | "A farmer calls from any phone. First, the system tells them it's an AI." |
-| 0:40 | Farmer | Speak the aphid question (or tap **Common** under the mic) | Point at **How the AI decided**: "It found the answer in expert-reviewed knowledge, confidence 0.44, all safety checks passed, so it answers by voice right away." |
-| 1:20 | Farmer | **1** → ask the red-rot question (type it, or tap **Hard**) → **2** → **2** | "This isn't in our knowledge base. We don't let the AI guess, so an agronomist will call back." |
-| 2:00 | Expert | Sign in as **Hamza (junior)** → open the question → write a draft → send. **Profile → Switch account → Dr. Ayesha (senior)** → open it → change a word (the diff shows) → **Approve with edits** | "Juniors draft, seniors approve. Scores are based on quality, not volume." |
-| 3:00 | Farmer | The phone rings → accept → the answer plays | "The farmer gets a call back: no app, no reading." |
-| 3:20 | Expert | **Add to knowledge base**. Optional: **Video call farmer** | "Now the AI knows this answer. For smartphone farmers, the agronomist can video call to see the crop." |
-| 3:50 | Admin → phone | **Trigger outbreak** → the phone buzzes with the stock alert → **Confirm stock is ready** | "Three farmers in Okara this week means an outbreak. Dealers stock up before demand hits, and farmers get a voice alert." |
-| 4:30 | — | Close | "AI where it's safe, humans where it matters, and a network that sees outbreaks first." |
+## 1. AI answers a common question (Farmer tab, 1 min)
+1. Tap the **green call button**.
+2. Press **1** (Punjabi), **1** (tehsil correct), **1** (wheat), **1** (under 3 days).
+3. Tap the **mic** and say slowly:
+   **"Meri gandum de pattiyan te sittiyan te nikke nikke sabz keere lagge ne. Tela lag gaya ae. Ki karaan?"**
+   Then tap **stop**. (Backup: tap the **Common** sample button.)
+4. The AI answers by voice, with a weather line. Point at **How the AI decided**: confidence 0.44, "All safety checks passed".
 
-If anything stalls: use the sample-question chips (cached, instant), or tick **Offline mode** in /admin.
+> Say: "A normal phone call. The system says it's an AI, understands Punjabi on this laptop, and only answers because the answer is in expert-reviewed knowledge. It even adds advice from today's weather."
+
+## 2. A hard question goes to a human (Farmer tab, 40 s)
+1. Press **1** (new question), then tap the **Hard** sample button (sugarcane red rot).
+2. The AI says an expert will call back. The panel shows "Not covered by knowledge base".
+3. Press **2** (end call), then **2** (delete the recording).
+
+> Say: "This isn't in our knowledge base, so the AI does not guess. And recordings are kept only if the farmer says yes."
+
+## 3. Junior drafts, senior approves (Expert tab, 1 min 20 s)
+1. Tap **Hamza Tariq** (junior), then the sugarcane question.
+2. Paste this into the box and tap **Send draft for review**:
+   یہ کماد کا رتا روگ لگتا ہے۔ متاثرہ گنے جڑ سمیت نکال کر کھیت سے باہر تلف کریں۔ متاثرہ کھیت کا پانی دوسرے کھیتوں میں نہ جانے دیں۔ اگلی بار صحت مند بیج لگائیں۔
+3. Tap **back** → **Profile** → **Switch account** → **Dr. Ayesha Malik** (senior).
+4. Open the question marked **Draft to review**. After **رتا روگ**, add **(ریڈ راٹ)**. The diff shows your change.
+5. Tap **Approve with edits**.
+
+> Say: "Juniors are fresh graduates who can only draft. A senior approves, and the junior's score depends on how much the senior had to change."
+
+## 4. The farmer gets a call back (Farmer tab, 30 s)
+1. The phone rings ("incoming call"). Tap the **green accept** button, and the approved answer plays.
+
+> Say: "The farmer gets a call back. No app, no reading."
+
+## 5. The AI learns (Expert tab, 20 s)
+1. Tap **Add to knowledge base**.
+
+> Say: "Now this answer is knowledge. The next farmer with this problem gets an instant AI answer."
+
+Optional, if there's time: tap **Video call farmer** and accept on the Farmer tab. "Smartphone farmers can show the crop live."
+
+## 6. Outbreak alert (Admin tab and dealer phone, 1 min)
+1. Admin tab: tap **Trigger outbreak**. The Okara counter goes 1, 2, 3.
+2. Hold up the **dealer phone**: it buzzes with "Outbreak near you: Okara" and a stock list. Tap **Confirm stock is ready**.
+
+> Say: "Three farmers in Okara reported yellow rust this week. That's an outbreak: every farmer there gets a voice alert, and dealers know what to stock before demand hits."
+
+## 7. Optional: 3-day follow-up (Admin and Farmer tabs, 30 s)
+1. Admin tab: tap **3-day follow-up calls**. The Farmer tab rings, accept, then tap **2** (still a problem). The question goes back to the experts.
+
+## Close
+> "AI where it's safe, humans where it matters, and a network that sees outbreaks first."
+
+**If anything stalls:** tap the sample buttons, or Admin → **Reset demo** and continue from the current step.
