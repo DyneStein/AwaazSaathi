@@ -79,7 +79,7 @@ async def ws(socket: WebSocket, topics: str = "*"):
 
 @app.get("/api/health")
 def ping():
-    return {"ok": True}
+    return {"ok": True, "app": "awaazsaathi"}  # "app" lets the Windows launcher recognise this server on the network
 
 
 def lan_ip() -> str:
