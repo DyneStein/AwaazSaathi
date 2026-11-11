@@ -1,0 +1,14 @@
+{
+ "v": {
+  "crop": "cotton",
+  "disease_tag": "cotton_mealybug",
+  "symptoms_ur": "کپاس پر سفید مکھی ہے",
+  "asks_dose": true,
+  "chemicals": [
+   "سپرے"
+  ],
+  "spread": true,
+  "normalized_query_ur": "کپاس پر سفید مکھی کے علاج کے لیے سپرے کی مقدار کتنی کرنی چاہیے؟"
+ },
+ "provider": "ollama:gemma3:4b"
+}

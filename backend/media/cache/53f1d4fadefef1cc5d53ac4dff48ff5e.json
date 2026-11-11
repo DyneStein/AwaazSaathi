@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "sugarcane",
+  "disease_tag": "sugarcane_top_borer",
+  "symptoms_ur": "میرے کماد کے گنے اندر سے لال ہو گئے ہیں، چیرنے پر لال رنگ میں سفید دھبے ہیں اور کھٹی بو آتی ہے",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": true,
+  "normalized_query_ur": "سکھر میں میرے کماد کے گنے اندر سے لالی پڑ گئی ہے اور اس میں سفید دھبے ہیں، یہ کیسا مرض ہے؟"
+ },
+ "provider": "ollama:gemma3:4b"
+}

@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "wheat",
+  "disease_tag": "wheat_yellow_rust",
+  "symptoms_ur": "ساڈی کنک دے پتیاں تے پیلیاں پیلیاں دھاریاں بن گئیاں نیں، ہتھ لاؤ تے پیلا پاؤڈر لگ جاندا اے",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": true,
+  "normalized_query_ur": "ساڈی دلاں دے گھاٹی تے پیلیاں پیلیاں دھاریاں ہوئیاں نیں، تے ہتھ لاؤݨا دے نال پیلا پاؤڈر نکلدے نیں."
+ },
+ "provider": "ollama:gemma3:4b"
+}

@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "wheat",
+  "disease_tag": "wheat_yellow_rust",
+  "symptoms_ur": "گندم کے پتوں پر پیلی دھاریاں اور پیلا سفوف ہے",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": true,
+  "normalized_query_ur": "گندم کے پتوں پر پیلی دھاریاں اور پیلا سفوف نظر آ رہا ہے، کیا یہ پھیل رہا ہے؟"
+ },
+ "provider": "ollama:gemma3:4b"
+}

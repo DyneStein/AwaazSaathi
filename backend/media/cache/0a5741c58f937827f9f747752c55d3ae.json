@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "wheat",
+  "disease_tag": "wheat_brown_rust",
+  "symptoms_ur": "گندم کے پتوں اور سٹوں پر چھوٹے چھوٹے سبز کیڑے لگے ہوئے ہیں اور پتے چپچپے ہو گئے ہیں",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": true,
+  "normalized_query_ur": "میری گندم کے پتوں اور سٹوں پر چھوٹے چھوٹے سبز کیڑے لگے ہوئے ہیں اور پتے چپچپے ہو گئے ہیں، کیا کروں؟"
+ },
+ "provider": "ollama:gemma3:4b"
+}
