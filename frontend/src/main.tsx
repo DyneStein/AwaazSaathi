@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import '@fontsource-variable/inter'
+import '@fontsource-variable/figtree'
 import '@fontsource/noto-nastaliq-urdu/400.css'
 import '@fontsource/noto-nastaliq-urdu/700.css'
 import './index.css'

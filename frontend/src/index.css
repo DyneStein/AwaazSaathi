@@ -1,52 +1,58 @@
 @import "tailwindcss";
 
 @theme {
-  --color-leaf-900: #123620;
-  --color-leaf-800: #1f5130;
-  --color-leaf-700: #2a6a3f;
-  --color-leaf-600: #348150;
-  --color-leaf-500: #4a9a62;
-  --color-leaf-200: #cfe5d3;
-  --color-leaf-100: #e6f2e7;
-  --color-soil-900: #3b2a1a;
-  --color-soil-700: #6b4a2b;
-  --color-soil-500: #a07a4f;
-  --color-soil-200: #e9dcc2;
-  --color-soil-100: #f3ead8;
-  --color-cream: #f8f4ea;
-  --color-wheat: #f2c14e;
-  --color-wheat-600: #d9a21f;
-  --color-alert: #c2410c;
-  --color-danger: #b91c1c;
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-field-950: #082E20;
+  --color-field-900: #0B3D2A;
+  --color-field-800: #0E4D35;
+  --color-field-700: #136343;
+  --color-field-600: #1B7A53;
+  --color-field-200: #BFDCCB;
+  --color-field-100: #E3EFE8;
+  --color-field-50: #F1F7F3;
+  --color-mustard: #E3B23C;
+  --color-mustard-600: #C9951F;
+  --color-mustard-100: #FBF1D6;
+  --color-ink: #15221B;
+  --color-muted: #5E6B63;
+  --color-line: #DDE3DC;
+  --color-canvas: #EEF2EE;
+  --color-danger: #B42318;
+  --color-danger-50: #FEF3F2;
+  --color-warn: #B54708;
+  --color-warn-50: #FFF6E5;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
   --font-urdu: "Noto Nastaliq Urdu", serif;
 }
 
 html, body, #root { height: 100%; }
-body { background: var(--color-cream); color: var(--color-soil-900); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+body { background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
+:focus-visible { outline: 2.5px solid var(--color-mustard); outline-offset: 2px; }
+button { cursor: pointer; }
 
-.urdu { font-family: var(--font-urdu); direction: rtl; line-height: 2.25; text-align: right; }
-.card { background: #fff; border-radius: 1rem; border: 1px solid #eadfca; box-shadow: 0 1px 2px rgba(59, 42, 26, .05); }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: .75rem; padding: .6rem 1rem; font-weight: 600; transition: transform .08s, background .15s, opacity .15s; }
-.btn:active { transform: scale(.97); }
-.btn:disabled { opacity: .5; pointer-events: none; }
-.btn-primary { background: var(--color-leaf-700); color: #fff; }
-.btn-primary:hover { background: var(--color-leaf-800); }
-.btn-ghost { background: var(--color-soil-100); color: var(--color-soil-900); }
-.btn-ghost:hover { background: var(--color-soil-200); }
+.urdu { font-family: var(--font-urdu); direction: rtl; line-height: 2.2; text-align: right; }
+.surface { background: #fff; border: 1px solid var(--color-line); border-radius: 14px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 12px; padding: .7rem 1rem; font-weight: 600; font-size: .95rem; transition: background .15s, transform .08s; }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .45; pointer-events: none; }
+.btn-primary { background: var(--color-field-800); color: #fff; }
+.btn-primary:hover { background: var(--color-field-900); }
+.btn-accent { background: var(--color-mustard); color: var(--color-field-950); }
+.btn-accent:hover { background: var(--color-mustard-600); }
+.btn-quiet { background: var(--color-field-50); color: var(--color-field-900); border: 1px solid var(--color-line); }
+.btn-quiet:hover { background: var(--color-field-100); }
 .btn-danger { background: var(--color-danger); color: #fff; }
-.btn-wheat { background: var(--color-wheat); color: var(--color-soil-900); }
-.chip { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .15rem .6rem; font-size: .75rem; font-weight: 600; }
+.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 8px; padding: .15rem .5rem; font-size: .75rem; font-weight: 600; line-height: 1.4; }
+.field { width: 100%; border: 1px solid var(--color-line); border-radius: 12px; padding: .65rem .8rem; background: #fff; }
+.field:focus { outline: 2px solid var(--color-field-600); outline-offset: 0; }
 
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(74, 154, 98, .55); } 100% { box-shadow: 0 0 0 26px rgba(74, 154, 98, 0); } }
-.pulse-ring { animation: pulse-ring 1.3s infinite; }
-@keyframes ring-shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-12deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(6deg); } }
-.ring-shake { animation: ring-shake .8s infinite; }
-@keyframes slide-down { from { transform: translateY(-120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.slide-down { animation: slide-down .35s cubic-bezier(.2, .9, .3, 1.2); }
-@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.fade-in { animation: fade-in .25s ease-out; }
-.bars span { display: inline-block; width: 4px; margin: 0 1.5px; border-radius: 2px; background: currentColor; animation: bar 1s ease-in-out infinite; }
-.bars span:nth-child(2) { animation-delay: .15s } .bars span:nth-child(3) { animation-delay: .3s } .bars span:nth-child(4) { animation-delay: .45s }
-@keyframes bar { 0%, 100% { height: 6px } 50% { height: 18px } }
-@media (prefers-reduced-motion: reduce) { .pulse-ring, .ring-shake, .bars span, .slide-down { animation: none; } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(227, 178, 60, .55); } 100% { box-shadow: 0 0 0 22px rgba(227, 178, 60, 0); } }
+.ring-pulse { animation: ring 1.4s infinite; }
+@keyframes enter { from { transform: translateY(-110%); } to { transform: none; } }
+.drop-in { animation: enter .35s cubic-bezier(.2, .9, .3, 1.1); }
+@keyframes sheet { from { transform: translateY(100%); } to { transform: none; } }
+.sheet-in { animation: sheet .28s cubic-bezier(.2, .9, .3, 1); }
+.eq span { display: inline-block; width: 3px; margin: 0 1.5px; border-radius: 2px; background: currentColor; animation: eq 1s ease-in-out infinite; }
+.eq span:nth-child(2) { animation-delay: .15s } .eq span:nth-child(3) { animation-delay: .3s } .eq span:nth-child(4) { animation-delay: .45s }
+@keyframes eq { 0%, 100% { height: 5px } 50% { height: 16px } }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) { .ring-pulse, .eq span, .drop-in, .sheet-in { animation: none; } }

@@ -1,84 +1,162 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronLeft, Loader2, Mic, MicOff, PhoneOff, Video, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { CallState } from '../lib/rtc'
 
-export function Logo({ size = 36 }: { size?: number }) {
-  return <img src="/icon.svg" width={size} height={size} alt="" className="rounded-xl shadow-sm" />
+export function Logo({ size = 32, src = '/icon.svg' }: { size?: number; src?: string }) {
+  return <img src={src} width={size} height={size} alt="AwaazSaathi" className="rounded-[10px]" />
 }
 
-export function Brand({ app, right, dark }: { app?: string; right?: ReactNode; dark?: boolean }) {
+export type Tab = { key: string; label: ReactNode; icon: LucideIcon; badge?: number }
+
+/** Phone-shaped app frame: full screen on phones, a centred device on laptops. `aside` shows next to it on wide screens. */
+export function AppShell({ header, tabs, active, onTab, children, aside, overlay, dir }: {
+  header: ReactNode; tabs?: Tab[]; active?: string; onTab?: (k: string) => void; children: ReactNode; aside?: ReactNode; overlay?: ReactNode; dir?: 'rtl' | 'ltr'
+}) {
   return (
-    <header className={`flex items-center justify-between gap-3 px-4 py-3 ${dark ? 'bg-leaf-800 text-white' : 'bg-white/80 backdrop-blur border-b border-soil-200'} sticky top-0 z-30`}>
-      <Link to="/" className="flex items-center gap-2.5">
-        <Logo size={34} />
-        <div className="leading-tight">
-          <div className="font-extrabold tracking-tight text-[17px]">Awaaz<span className={dark ? 'text-wheat' : 'text-leaf-600'}>Saathi</span></div>
-          {app && <div className={`text-[11px] font-semibold uppercase tracking-wider ${dark ? 'text-leaf-200' : 'text-soil-500'}`}>{app}</div>}
-        </div>
-      </Link>
+    <div className="min-h-[100dvh] lg:py-8 lg:flex lg:justify-center lg:items-start lg:gap-8">
+      <div dir={dir} className="relative mx-auto lg:mx-0 flex flex-col bg-field-50 w-full max-w-[440px] h-[100dvh] lg:h-[860px] lg:rounded-[32px] lg:border-[6px] lg:border-ink lg:shadow-2xl overflow-hidden">
+        {header}
+        <main className="flex-1 overflow-y-auto no-scrollbar">{children}</main>
+        {tabs && <TabBar tabs={tabs} active={active!} onTab={onTab!} />}
+        {overlay}
+      </div>
+      {aside && <div className="hidden lg:block w-[480px] max-h-[860px] overflow-y-auto no-scrollbar">{aside}</div>}
+    </div>
+  )
+}
+
+export function AppBar({ title, subtitle, back, right, tone = 'dark', logo }: { title: ReactNode; subtitle?: ReactNode; back?: () => void; right?: ReactNode; tone?: 'dark' | 'light'; logo?: string }) {
+  const dark = tone === 'dark'
+  return (
+    <header className={`shrink-0 flex items-center gap-3 px-4 pt-4 pb-3 ${dark ? 'bg-field-800 text-white' : 'bg-white border-b border-line'}`}>
+      {back ? <button onClick={back} aria-label="Back" className={`-ml-1 p-1.5 rounded-lg ${dark ? 'hover:bg-white/10' : 'hover:bg-field-50'}`}><ChevronLeft size={22} /></button>
+        : <Link to="/" aria-label="Home"><Logo size={32} src={logo} /></Link>}
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-[17px] leading-tight truncate">{title}</div>
+        {subtitle && <div className={`text-[12.5px] truncate ${dark ? 'text-field-200' : 'text-muted'}`}>{subtitle}</div>}
+      </div>
       <div className="flex items-center gap-2">{right}</div>
     </header>
   )
 }
 
-export function Spinner({ className = '' }: { className?: string }) {
-  return <span className={`inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent ${className}`} />
-}
-
-export function LiveDot({ on }: { on: boolean }) {
+function TabBar({ tabs, active, onTab }: { tabs: Tab[]; active: string; onTab: (k: string) => void }) {
   return (
-    <span className={`chip ${on ? 'bg-leaf-100 text-leaf-800' : 'bg-red-100 text-red-700'}`} title={on ? 'Real-time connected' : 'Reconnecting'}>
-      <span className={`h-2 w-2 rounded-full ${on ? 'bg-leaf-500 animate-pulse' : 'bg-red-500'}`} /> {on ? 'Live' : 'Offline'}
-    </span>
+    <nav className="shrink-0 grid bg-white border-t border-line pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+      {tabs.map((t) => {
+        const on = t.key === active
+        const Icon = t.icon
+        return (
+          <button key={t.key} onClick={() => onTab(t.key)} className={`relative flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-[11.5px] font-semibold ${on ? 'text-field-800' : 'text-muted'}`}>
+            {on && <span className="absolute top-0 h-[3px] w-10 rounded-b bg-mustard" />}
+            <span className="relative"><Icon size={22} strokeWidth={on ? 2.4 : 1.9} />
+              {!!t.badge && <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] grid place-items-center px-1">{t.badge}</span>}
+            </span>
+            {t.label}
+          </button>)
+      })}
+    </nav>
   )
 }
 
-export function MockTag({ children = 'MOCK' }: { children?: ReactNode }) {
-  return <span className="chip bg-soil-100 text-soil-700 border border-dashed border-soil-500/50 text-[10px] uppercase tracking-wide">{children}</span>
+export function Spinner({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return <Loader2 size={size} className={`animate-spin ${className}`} />
 }
 
-const LEVEL: Record<string, string> = {
-  junior: 'bg-sky-100 text-sky-800', verified: 'bg-leaf-100 text-leaf-800', senior: 'bg-wheat/30 text-soil-900',
+export function LiveDot({ on }: { on: boolean }) {
+  return <span title={on ? 'Live updates connected' : 'Reconnecting'} className={`inline-block h-2.5 w-2.5 rounded-full ${on ? 'bg-mustard' : 'bg-danger animate-pulse'}`} />
 }
+
+export function Mock({ children = 'Simulated' }: { children?: ReactNode }) {
+  return <span className="tag bg-white text-muted border border-dashed border-muted/40">{children}</span>
+}
+
+const LEVEL: Record<string, string> = { junior: 'bg-sky-50 text-sky-800 border-sky-200', verified: 'bg-field-100 text-field-800 border-field-200', senior: 'bg-mustard-100 text-field-950 border-mustard' }
 export function LevelBadge({ level }: { level: string }) {
-  return <span className={`chip ${LEVEL[level] || 'bg-gray-100'} capitalize`}>{level === 'senior' ? '★ ' : ''}{level}</span>
+  return <span className={`tag border capitalize ${LEVEL[level] || ''}`}>{level}</span>
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="text-center text-soil-500 py-10 text-sm">{children}</div>
+export function Empty({ icon: Icon, title, children }: { icon?: LucideIcon; title: string; children?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center text-center px-8 py-14 text-muted">
+      {Icon && <div className="h-14 w-14 rounded-2xl bg-white border border-line grid place-items-center mb-3"><Icon size={26} className="text-field-700" /></div>}
+      <div className="font-semibold text-ink">{title}</div>
+      {children && <div className="text-sm mt-1">{children}</div>}
+    </div>
+  )
 }
 
 export function ErrorNote({ error }: { error: string | null }) {
   if (!error) return null
-  return <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2">{error}</div>
+  return <div className="flex gap-2 items-start rounded-xl bg-danger-50 border border-danger/20 text-danger text-sm px-3 py-2"><AlertTriangle size={16} className="mt-0.5 shrink-0" />{error}</div>
 }
 
-export function ScoreBar({ value, min, label }: { value: number; min?: number; label: string }) {
-  const pct = Math.max(0, Math.min(1, value)) * 100
+export function Meter({ value, min, label }: { value: number; min?: number; label: string }) {
   const ok = min === undefined || value >= min
   return (
     <div>
-      <div className="flex justify-between text-xs text-soil-700 mb-1"><span>{label}</span><span className="font-mono">{value.toFixed(2)}{min !== undefined && ` / min ${min.toFixed(2)}`}</span></div>
-      <div className="relative h-2 rounded-full bg-soil-100 overflow-hidden">
-        <div className={`h-full rounded-full ${ok ? 'bg-leaf-500' : 'bg-alert'}`} style={{ width: `${pct}%` }} />
-        {min !== undefined && <div className="absolute top-0 h-full w-0.5 bg-soil-900/60" style={{ left: `${min * 100}%` }} />}
+      <div className="flex justify-between text-xs text-muted mb-1"><span>{label}</span><span className="font-semibold text-ink">{value.toFixed(2)}{min !== undefined && <span className="text-muted font-normal"> / needs {min.toFixed(2)}</span>}</span></div>
+      <div className="relative h-2 rounded-full bg-line/70">
+        <div className={`h-full rounded-full ${ok ? 'bg-field-600' : 'bg-warn'}`} style={{ width: `${Math.max(2, Math.min(1, value) * 100)}%` }} />
+        {min !== undefined && <div className="absolute -top-0.5 h-3 w-0.5 bg-ink" style={{ left: `${min * 100}%` }} />}
       </div>
     </div>
   )
 }
 
 const REASON: Record<string, string> = {
-  low_retrieval: 'Knowledge base does not cover this', not_grounded: 'AI answer not supported by sources',
-  dose_question: 'Asks for pesticide/fertilizer dose', banned_chemical: 'Banned / restricted chemical',
-  suspected_outbreak: 'Suspected outbreak', senior_only_topic: 'Senior-only topic',
+  low_retrieval: 'Not covered by knowledge base', not_grounded: 'Answer not supported by sources',
+  dose_question: 'Asks for a dose', banned_chemical: 'Banned chemical named',
+  suspected_outbreak: 'Possible outbreak', senior_only_topic: 'Senior-only topic',
 }
-export function ReasonChips({ reasons }: { reasons: string[] }) {
-  if (!reasons?.length) return <span className="chip bg-leaf-100 text-leaf-800">✓ Passed all checks</span>
+export function Reasons({ reasons }: { reasons: string[] }) {
+  if (!reasons?.length) return <span className="tag bg-field-100 text-field-800"><CheckCircle2 size={13} /> All safety checks passed</span>
   return (
     <div className="flex flex-wrap gap-1.5">
-      {reasons.map((r) => {
-        const [k, ...rest] = r.split(':')
-        return <span key={r} className="chip bg-orange-100 text-orange-800" title={rest.join(':')}>⚑ {REASON[k] || k}<span className="font-normal opacity-70">{rest.join(':')}</span></span>
-      })}
+      {reasons.map((r) => { const [k, ...rest] = r.split(':'); return <span key={r} title={rest.join(':')} className="tag bg-warn-50 text-warn border border-warn/20"><AlertTriangle size={12} />{REASON[k] || k}</span> })}
     </div>
   )
+}
+
+/** Full-screen live video call UI, used by the farmer and the expert apps. */
+export function VideoCallView({ state, local, remote, peerName, error, onAccept, onDecline, onHangup }: {
+  state: CallState; local: MediaStream | null; remote: MediaStream | null; peerName: string; error: string | null
+  onAccept?: () => void; onDecline: () => void; onHangup: () => void
+}) {
+  const lv = useRef<HTMLVideoElement>(null)
+  const rv = useRef<HTMLVideoElement>(null)
+  useEffect(() => { if (lv.current) lv.current.srcObject = local }, [local])
+  useEffect(() => { if (rv.current) rv.current.srcObject = remote }, [remote])
+  if (state === 'idle') return null
+  return (
+    <div className="absolute inset-0 z-40 bg-field-950 text-white flex flex-col" dir="ltr">
+      <video ref={rv} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
+      {!remote && <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+        <div className={`h-24 w-24 rounded-full bg-field-800 grid place-items-center ${state !== 'connected' ? 'ring-pulse' : ''}`}><Video size={38} /></div>
+        <div className="text-center"><div className="text-xl font-bold">{peerName}</div>
+          <div className="text-field-200 text-sm">{state === 'calling' ? 'Calling…' : state === 'ringing' ? 'Incoming video call' : state === 'ended' ? 'Call ended' : 'Connecting…'}</div></div>
+      </div>}
+      {remote && <div className="relative z-10 p-4 bg-gradient-to-b from-black/60 to-transparent"><div className="font-bold">{peerName}</div><div className="text-xs text-field-200">Video call, live</div></div>}
+      <video ref={lv} autoPlay playsInline muted className={`absolute right-4 top-20 z-10 w-28 h-40 object-cover rounded-xl border-2 border-white/70 bg-black ${local ? '' : 'hidden'}`} />
+      {error && <div className="absolute inset-x-4 top-4 z-20"><ErrorNote error={error} /></div>}
+      <div className="mt-auto relative z-10 p-8 flex justify-center gap-12 bg-gradient-to-t from-black/60 to-transparent">
+        {state === 'ringing' ? <>
+          <button onClick={onDecline} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger grid place-items-center"><PhoneOff /></button>
+          <button onClick={onAccept} aria-label="Accept" className="h-16 w-16 rounded-full bg-field-600 grid place-items-center ring-pulse"><Video /></button>
+        </> : state !== 'ended' && <>
+          <MuteButton stream={local} />
+          <button onClick={onHangup} aria-label="End call" className="h-16 w-16 rounded-full bg-danger grid place-items-center"><PhoneOff /></button>
+        </>}
+      </div>
+    </div>
+  )
+}
+
+function MuteButton({ stream }: { stream: MediaStream | null }) {
+  const t = stream?.getAudioTracks()[0]
+  return <button aria-label="Mute" onClick={(e) => { if (t) { t.enabled = !t.enabled; (e.currentTarget as HTMLButtonElement).dataset.m = String(!t.enabled) } }} className="h-16 w-16 rounded-full bg-white/15 grid place-items-center group">
+    <Mic className="group-data-[m=true]:hidden" /><MicOff className="hidden group-data-[m=true]:block" />
+  </button>
 }
