@@ -1,0 +1,13 @@
+{
+  "Okara":        {"ur": "اوکاڑہ",       "district": "Okara",       "lat": 30.81, "lon": 73.45, "neighbors": ["Depalpur", "Renala Khurd", "Sahiwal", "Pakpattan"]},
+  "Depalpur":     {"ur": "دیپالپور",     "district": "Okara",       "lat": 30.67, "lon": 73.65, "neighbors": ["Okara", "Renala Khurd", "Pakpattan"]},
+  "Renala Khurd": {"ur": "رینالہ خورد",  "district": "Okara",       "lat": 30.88, "lon": 73.60, "neighbors": ["Okara", "Depalpur"]},
+  "Sahiwal":      {"ur": "ساہیوال",      "district": "Sahiwal",     "lat": 30.66, "lon": 73.10, "neighbors": ["Okara", "Pakpattan"]},
+  "Pakpattan":    {"ur": "پاکپتن",       "district": "Pakpattan",   "lat": 30.34, "lon": 73.39, "neighbors": ["Sahiwal", "Okara", "Depalpur"]},
+  "Multan":       {"ur": "ملتان",        "district": "Multan",      "lat": 30.20, "lon": 71.47, "neighbors": ["Khanewal", "Vehari"]},
+  "Khanewal":     {"ur": "خانیوال",      "district": "Khanewal",    "lat": 30.30, "lon": 71.93, "neighbors": ["Multan", "Vehari"]},
+  "Vehari":       {"ur": "وہاڑی",        "district": "Vehari",      "lat": 30.04, "lon": 72.35, "neighbors": ["Multan", "Khanewal"]},
+  "Faisalabad":   {"ur": "فیصل آباد",    "district": "Faisalabad",  "lat": 31.42, "lon": 73.08, "neighbors": ["Jhang"]},
+  "Jhang":        {"ur": "جھنگ",         "district": "Jhang",       "lat": 31.27, "lon": 72.32, "neighbors": ["Faisalabad"]},
+  "Sheikhupura":  {"ur": "شیخوپورہ",     "district": "Sheikhupura", "lat": 31.71, "lon": 73.99, "neighbors": []}
+}

@@ -1,0 +1,146 @@
+[
+  {
+    "crop": "wheat", "disease_tag": "wheat_yellow_rust",
+    "title_en": "Wheat yellow (stripe) rust", "title_ur": "گندم کی پیلی کنگی",
+    "symptoms_ur": "گندم کے پتوں پر پیلی دھاریاں، پیلا سفوف، ہاتھ لگانے سے پیلا پاؤڈر ہاتھ پر لگ جاتا ہے، پتے پیلے ہو کر سوکھ رہے ہیں، پیلی کنگی، زرد کنگی",
+    "keywords": "peeli kungi zard kungi yellow rust stripe rust patte peele dhariyan powder kanak gandum پیلیاں دھاریاں کنک",
+    "answer_ur": "یہ گندم کی پیلی کنگی لگتی ہے جو ٹھنڈے اور نم موسم میں تیزی سے پھیلتی ہے۔ متاثرہ کھیت کو روزانہ دیکھیں اور زیادہ پانی یا زیادہ یوریا نہ دیں۔ سپرے کی ضرورت ہو تو صرف محکمہ زراعت یا ہمارے ماہر کی بتائی ہوئی دوا استعمال کریں اور لیبل پڑھیں۔ اگلے سال کنگی کے خلاف مزاحمت والی منظور شدہ قسم کاشت کریں۔ اگر بیماری پورے کھیت یا آس پاس کے کھیتوں میں پھیل رہی ہو تو فوراً دوبارہ فون کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "wheat", "disease_tag": "wheat_brown_rust",
+    "title_en": "Wheat brown (leaf) rust", "title_ur": "گندم کی بھوری کنگی",
+    "symptoms_ur": "گندم کے پتوں پر بھورے یا نارنجی گول دانے، بکھرے ہوئے بھورے دھبے، بھورا سفوف، بھوری کنگی",
+    "keywords": "bhoori kungi brown rust leaf rust narangi daane brown spots kanak",
+    "answer_ur": "پتوں پر بھورے یا نارنجی بکھرے دانے بھوری کنگی کی نشانی ہیں۔ کھیت میں پانی کھڑا نہ ہونے دیں اور نائٹروجن کھاد حد سے زیادہ نہ ڈالیں۔ اگر بیماری جھنڈے والے پتے تک پہنچ جائے تو سپرے کے لیے محکمہ زراعت یا ہمارے ماہر سے مشورہ کریں۔ آئندہ مزاحمت والی منظور شدہ قسم لگائیں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "wheat", "disease_tag": "wheat_aphid",
+    "title_en": "Wheat aphid", "title_ur": "گندم کا سست تیلا",
+    "symptoms_ur": "گندم کے پتوں اور سٹوں پر چھوٹے سبز یا کالے کیڑے، چپچپا مادہ، سست تیلا، تیلا، پتے مڑ رہے ہیں",
+    "keywords": "sust tela tela aphid chote keere sabz keeray chipchipa sitta bali kanak",
+    "answer_ur": "یہ سست تیلا لگتا ہے جو پتوں اور سٹوں کا رس چوستا ہے۔ کھیت میں لیڈی برڈ بیٹل جیسے دوست کیڑے ہوں تو وہ تیلا خود کھا جاتے ہیں، اس لیے جلدی سپرے نہ کریں۔ کھیت کے کئی حصوں میں دیکھیں کہ تیلا کتنا ہے۔ اگر تعداد بہت بڑھ جائے تو سپرے سے پہلے ہمارے ماہر یا محکمہ زراعت سے پوچھیں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "wheat", "disease_tag": "wheat_termite",
+    "title_en": "Termite in wheat", "title_ur": "گندم میں دیمک",
+    "symptoms_ur": "گندم کے پودے سوکھ رہے ہیں، جڑ سے کٹے ہوئے، کھینچنے پر آسانی سے نکل آتے ہیں، مٹی میں سفید کیڑے، دیمک، سیونک",
+    "keywords": "deemak siyonk termite paude sookh rahe jarr kati safed keeray",
+    "answer_ur": "پودے سوکھ کر آسانی سے اکھڑ آئیں اور جڑوں پر سفید کیڑے ہوں تو یہ دیمک ہو سکتی ہے۔ کھیت میں کچی گوبر کی کھاد نہ ڈالیں، صرف گلی سڑی کھاد استعمال کریں۔ وقت پر آبپاشی کریں کیونکہ خشک کھیت میں دیمک زیادہ لگتی ہے۔ دوائی کے بارے میں ہمارے ماہر سے مشورہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "wheat", "disease_tag": "wheat_weeds",
+    "title_en": "Weeds in wheat (dumbi sitti, jangli jai)", "title_ur": "گندم میں جڑی بوٹیاں",
+    "symptoms_ur": "گندم میں گھاس، دمبی سٹی، جنگلی جئی، باتھو، جڑی بوٹیاں بہت زیادہ ہو گئی ہیں",
+    "keywords": "jari booti ghaas dumbi sitti jangli jai bathu weeds grass",
+    "answer_ur": "گندم میں دمبی سٹی اور جنگلی جئی جیسی جڑی بوٹیاں پیداوار کم کر دیتی ہیں۔ پہلے یا دوسرے پانی کے بعد جب جڑی بوٹیاں چھوٹی ہوں تب تلفی سب سے بہتر ہے۔ ہاتھ سے نکالنا یا گوڈی بھی فائدہ دیتی ہے۔ جڑی بوٹی مار دوا کی قسم اور وقت کے لیے ہمارے ماہر سے پوچھیں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "cotton", "disease_tag": "cotton_whitefly",
+    "title_en": "Cotton whitefly", "title_ur": "کپاس کی سفید مکھی",
+    "symptoms_ur": "کپاس کے پتوں کے نیچے چھوٹی سفید مکھیاں، پتے چپچپے اور کالے، ہلانے پر سفید مکھیاں اڑتی ہیں، سفید مکھی",
+    "keywords": "safed makhi whitefly patte chipchipe kaale narma kapas",
+    "answer_ur": "پتوں کے نیچے چھوٹی سفید مکھیاں سفید مکھی کی نشانی ہیں جو رس چوستی اور وائرس پھیلاتی ہے۔ کھیت میں پیلے چپکنے والے کارڈ لگائیں اور جڑی بوٹیاں صاف رکھیں۔ بار بار ایک ہی دوائی کا سپرے نہ کریں ورنہ مکھی پر اثر ختم ہو جاتا ہے۔ سپرے کی ضرورت ہو تو ہمارے ماہر یا محکمہ زراعت سے مشورہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "cotton", "disease_tag": "cotton_pink_bollworm",
+    "title_en": "Cotton pink bollworm", "title_ur": "کپاس کی گلابی سنڈی",
+    "symptoms_ur": "کپاس کے ٹینڈوں میں گلابی سنڈی، ٹینڈے اندر سے خراب، پھول بند گلاب کی طرح، روئی داغدار، گلابی سنڈی",
+    "keywords": "gulabi sundi pink bollworm tinde phool band rosette kapas narma",
+    "answer_ur": "ٹینڈوں کے اندر گلابی سنڈی ہو تو روئی خراب ہو جاتی ہے۔ بند گلاب جیسے پھول توڑ کر تلف کر دیں۔ فیرومون ٹریپ لگا کر سنڈی کی تعداد پر نظر رکھیں۔ چھڑیاں اور گرے ہوئے ٹینڈے کھیت میں نہ چھوڑیں۔ دوائی کے لیے ہمارے ماہر سے مشورہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "cotton", "disease_tag": "cotton_leaf_curl",
+    "title_en": "Cotton leaf curl virus", "title_ur": "کپاس کا پتہ مروڑ وائرس",
+    "symptoms_ur": "کپاس کے پتے اوپر یا نیچے مڑ رہے ہیں، رگیں موٹی، پتوں کے نیچے چھوٹے پتے جیسے ابھار، پودا چھوٹا رہ گیا، پتہ مروڑ",
+    "keywords": "patta marorr leaf curl virus patte murr rahe ragen moti kapas",
+    "answer_ur": "پتوں کا مڑنا اور رگوں کا موٹا ہونا پتہ مروڑ وائرس کی نشانی ہے۔ اس وائرس کا کوئی سپرے علاج نہیں، یہ سفید مکھی سے پھیلتا ہے۔ سفید مکھی پر قابو رکھیں اور بہت زیادہ متاثرہ پودے نکال دیں۔ اگلی بار وائرس کے خلاف بہتر منظور شدہ قسم اور وقت پر کاشت کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "cotton", "disease_tag": "cotton_jassid",
+    "title_en": "Cotton jassid", "title_ur": "کپاس کا سبز تیلا",
+    "symptoms_ur": "کپاس کے پتوں کے کنارے پیلے پھر لال، پتے نیچے کی طرف مڑے، ترچھا چلنے والے سبز کیڑے، سبز تیلا، چست تیلا",
+    "keywords": "sabz tela jassid chust tela patte kinare laal peele kapas",
+    "answer_ur": "پتوں کے کنارے پیلے اور پھر لال ہوں اور سبز کیڑے ترچھا چلیں تو یہ سبز تیلا ہے۔ کھیت میں دوست کیڑوں کو بچائیں اور بلا ضرورت سپرے نہ کریں۔ اگر ہر پتے پر کئی تیلے ہوں تو ہمارے ماہر سے سپرے کا مشورہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "cotton", "disease_tag": "cotton_mealybug",
+    "title_en": "Cotton mealybug", "title_ur": "کپاس کی گدھیڑی (ملی بگ)",
+    "symptoms_ur": "کپاس کے تنے اور پتوں پر سفید روئی جیسے کیڑے، چپچپا، پودا کمزور، گدھیڑی، ملی بگ",
+    "keywords": "gadheri mealy bug safed rui jaise keeray tana kapas",
+    "answer_ur": "تنے اور پتوں پر سفید روئی جیسے کیڑے ملی بگ یعنی گدھیڑی ہو سکتے ہیں۔ متاثرہ پودے اور آس پاس کی جڑی بوٹیاں نکال کر تلف کریں۔ کھیت کا کام متاثرہ حصے سے آخر میں کریں تاکہ کیڑا کپڑوں سے نہ پھیلے۔ دوائی کے لیے ہمارے ماہر سے پوچھیں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "rice", "disease_tag": "rice_bacterial_blight",
+    "title_en": "Rice bacterial leaf blight", "title_ur": "مونجی کا بیکٹیریائی جھلساؤ",
+    "symptoms_ur": "مونجی کے پتوں کے کناروں سے پیلی یا سفید لمبی دھاریاں، پتے اوپر سے سوکھ رہے ہیں، جھلساؤ، چاول",
+    "keywords": "jhulsao bacterial blight patte kinare sookh monji chawal dhaan",
+    "answer_ur": "پتوں کے کناروں سے سوکھنا بیکٹیریائی جھلساؤ کی نشانی ہو سکتی ہے۔ نائٹروجن کھاد زیادہ نہ ڈالیں اور متاثرہ کھیت کا پانی صحت مند کھیت میں نہ جانے دیں۔ کھیت میں صفائی رکھیں۔ تصدیق اور علاج کے لیے ہمارے ماہر سے رابطہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "rice", "disease_tag": "rice_blast",
+    "title_en": "Rice blast", "title_ur": "مونجی کا بلاسٹ",
+    "symptoms_ur": "مونجی کے پتوں پر آنکھ یا کشتی جیسے دھبے، درمیان سے سرمئی کنارے بھورے، بالی کی گردن کالی ہو کر ٹوٹ جاتی ہے، بلاسٹ",
+    "keywords": "blast ankh jaise dhabbe kashti grey brown gardan kaali monji chawal",
+    "answer_ur": "پتوں پر کشتی جیسے دھبے جن کا درمیان سرمئی ہو، بلاسٹ کی نشانی ہیں۔ نائٹروجن کھاد قسطوں میں ڈالیں اور ایک ساتھ زیادہ نہ دیں۔ کھیت میں پانی کی کمی نہ ہونے دیں۔ سپرے کی ضرورت کا فیصلہ ہمارے ماہر سے مشورے کے بعد کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "rice", "disease_tag": "rice_stem_borer",
+    "title_en": "Rice stem borer", "title_ur": "مونجی کے تنے کی سنڈی",
+    "symptoms_ur": "مونجی کا درمیانی پتہ سوکھ گیا، سفید بالیاں جن میں دانہ نہیں، تنا اندر سے کھایا ہوا، گڑوواں، تنے کی سنڈی",
+    "keywords": "tane ki sundi stem borer dead heart safed bali garoowan monji",
+    "answer_ur": "درمیانی پتہ سوکھنا یا خالی سفید بالیاں تنے کی سنڈی کی نشانی ہیں۔ فصل کاٹنے کے بعد مڈھ کھیت میں نہ چھوڑیں، انہیں تلف کریں۔ روشنی یا فیرومون ٹریپ سے سنڈی کی تعداد دیکھیں۔ دوائی کے لیے ہمارے ماہر سے پوچھیں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "rice", "disease_tag": "rice_zinc_khaira",
+    "title_en": "Zinc deficiency in rice (khaira)", "title_ur": "مونجی میں زنک کی کمی (خیرہ)",
+    "symptoms_ur": "مونجی کی پنیری یا پودوں کے پتوں پر بھورے زنگ جیسے دھبے، پودا چھوٹا رہ گیا، خیرہ، زنک کی کمی",
+    "keywords": "khaira zinc ki kami bhoore dhabbe paneeri chota paudha monji",
+    "answer_ur": "پتوں پر بھورے زنگ جیسے دھبے اور پودے کا چھوٹا رہ جانا خیرہ یعنی زنک کی کمی ہو سکتی ہے۔ زمین کا تجزیہ کروائیں تاکہ کمی کی تصدیق ہو۔ زنک کھاد کی مقدار کے لیے ہمارے ماہر یا محکمہ زراعت سے مشورہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "sugarcane", "disease_tag": "sugarcane_top_borer",
+    "title_en": "Sugarcane top borer", "title_ur": "کماد کی چوٹی کی سنڈی",
+    "symptoms_ur": "کماد کی چوٹی کے پتے سوکھ گئے، گوبھ سوکھی، پتوں میں قطار میں سوراخ، چوٹی کی سنڈی، گنا",
+    "keywords": "choti ki sundi top borer ganna kamaad gobh sookhi surakh",
+    "answer_ur": "چوٹی کا سوکھنا اور پتوں میں قطار سے سوراخ چوٹی کی سنڈی کی نشانی ہیں۔ متاثرہ پودے اور انڈوں والے پتے کاٹ کر تلف کریں۔ کھیت کو صاف رکھیں اور فصل کے بعد کچرا جلانے کی بجائے تلف کریں۔ دوائی کے لیے ہمارے ماہر سے پوچھیں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "sugarcane", "disease_tag": "sugarcane_pyrilla",
+    "title_en": "Sugarcane pyrilla", "title_ur": "کماد کا پائریلا (گھوڑا کیڑا)",
+    "symptoms_ur": "کماد کے پتوں پر بھوسے رنگ کے کیڑے، پتے پیلے، کالی پھپھوند، چپچپا مادہ، پائریلا، گنا",
+    "keywords": "pyrilla ghora keera ganna kamaad kaali phaphoond patte peele",
+    "answer_ur": "پتوں پر کالی پھپھوند اور بھوسے رنگ کے کیڑے پائریلا کی نشانی ہیں۔ اس کے دشمن کیڑے قدرتی طور پر اسے قابو کرتے ہیں، اس لیے بلا ضرورت سپرے نہ کریں۔ نائٹروجن کھاد زیادہ نہ ڈالیں۔ زیادہ حملے کی صورت میں ہمارے ماہر سے مشورہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "maize", "disease_tag": "maize_fall_armyworm",
+    "title_en": "Maize fall armyworm", "title_ur": "مکئی کی لشکری سنڈی (فال آرمی ورم)",
+    "symptoms_ur": "مکئی کی گوبھ میں سنڈی، پتوں میں بڑے سوراخ، برادے جیسا فضلہ، پتے کٹے پھٹے، لشکری سنڈی، فال آرمی ورم",
+    "keywords": "lashkari sundi fall armyworm makai makki gobh surakh buraada",
+    "answer_ur": "گوبھ میں برادے جیسا فضلہ اور پتوں میں بڑے سوراخ لشکری سنڈی کی نشانی ہیں۔ صبح سویرے کھیت دیکھیں اور ابتدائی حملے میں سنڈیاں ہاتھ سے تلف کریں۔ فیرومون ٹریپ لگائیں۔ یہ سنڈی تیزی سے پھیلتی ہے، اس لیے دوائی کے لیے جلد ہمارے ماہر سے رابطہ کریں۔",
+    "senior_only": false
+  },
+  {
+    "crop": "maize", "disease_tag": "maize_leaf_blight",
+    "title_en": "Maize leaf blight", "title_ur": "مکئی کے پتوں کا جھلساؤ",
+    "symptoms_ur": "مکئی کے پتوں پر لمبے سرمئی یا بھورے دھبے، پتے نیچے سے اوپر سوکھ رہے ہیں، جھلساؤ",
+    "keywords": "jhulsao leaf blight lambe dhabbe grey brown makai makki",
+    "answer_ur": "پتوں پر لمبے سرمئی یا بھورے دھبے پتوں کے جھلساؤ کی نشانی ہیں۔ فصل کے بعد بچا ہوا کچرا کھیت سے نکال دیں اور ہر سال ایک ہی فصل نہ لگائیں۔ مزاحمت والی منظور شدہ قسم لگائیں۔ زیادہ حملے میں ہمارے ماہر سے مشورہ کریں۔",
+    "senior_only": false
+  }
+]
