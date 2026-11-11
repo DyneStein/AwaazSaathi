@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from .. import config, prompts, seed, state
 from ..db import SessionLocal, get_db
 from ..models import Call, EventLog, Expert, Farmer, KBEntry, Outbreak, Query, now
-from ..pipeline import outbreak, retrieval, router as trust_router
+from ..pipeline import llm, outbreak, retrieval, router as trust_router, stt, tts
 from ..ws import hub
 from .common import iso
 from .expert import sla_sweep
@@ -39,6 +39,8 @@ def set_offline(body: OfflineIn):
 def health(db=Depends(get_db)):
     return {
         "offline": state.is_offline(),
+        "local": {"Speech-to-text (whisper.cpp)": stt.local_available(), f"Language + vision ({config.OLLAMA_MODEL})": llm.ollama_available(),
+                  "Urdu voice (edge-tts)": tts.edge_available()},
         "keys": {"gemini": bool(config.GEMINI_API_KEY), "groq": bool(config.GROQ_API_KEY),
                  "azure_tts": bool(config.AZURE_SPEECH_KEY)},
         "services": state.health,

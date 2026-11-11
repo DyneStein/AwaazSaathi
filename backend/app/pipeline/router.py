@@ -25,7 +25,7 @@ def process(db, *, farmer: Farmer, call_id: int | None, crop: str, duration: str
     answer, grounding = "", 0.0
     if top and top_score >= config.RETRIEVAL_MIN:
         passages = [top.answer_ur]
-        composed = llm.compose(normalized, passages)
+        composed = llm.compose(normalized, passages) if config.COMPOSE_WITH_LLM else None
         answer = composed or top.answer_ur  # offline / LLM down: the expert-reviewed KB text verbatim
         grounding = nil_detection.grounding_score(answer, passages)
 

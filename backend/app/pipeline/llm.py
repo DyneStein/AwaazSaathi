@@ -37,6 +37,26 @@ def _groq(prompt: str, json_mode: bool) -> str:
     return r.json()["choices"][0]["message"]["content"]
 
 
+def ollama_available() -> bool:
+    try:
+        return httpx.get(f"{config.OLLAMA_URL}/api/tags", timeout=1.5).status_code == 200
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _ollama(prompt: str, json_mode: bool, image: tuple[bytes, str] | None = None) -> str:
+    msg: dict = {"role": "user", "content": prompt}
+    if image:
+        msg["images"] = [base64.b64encode(image[0]).decode()]
+    body: dict = {"model": config.OLLAMA_MODEL, "messages": [msg], "stream": False,
+                  "options": {"temperature": 0.1}, "keep_alive": "30m"}
+    if json_mode:
+        body["format"] = "json"
+    r = httpx.post(f"{config.OLLAMA_URL}/api/chat", json=body, timeout=60)
+    r.raise_for_status()
+    return r.json()["message"]["content"]
+
+
 def _parse_json(text: str) -> dict:
     m = re.search(r"\{.*\}", text, re.S)
     return json.loads(m.group(0) if m else text)
@@ -48,14 +68,18 @@ def call(prompt: str, *, json_mode: bool, service: str, image: tuple[bytes, str]
     hit = cache.get(k)
     if hit is not None:
         return hit["v"]
-    if state.is_offline():
-        return None
     providers = []
-    if config.GEMINI_API_KEY:
-        model = config.GEMINI_VISION_MODEL if image else config.GEMINI_TEXT_MODEL
-        providers.append(("gemini", lambda: _gemini(prompt, model, json_mode, image)))
-    if config.GROQ_API_KEY and not image:
-        providers.append(("groq", lambda: _groq(prompt, json_mode)))
+    for name in config.LLM_ORDER:
+        name = name.strip()
+        if name == "ollama" and ollama_available():
+            providers.append((f"ollama:{config.OLLAMA_MODEL}", lambda: _ollama(prompt, json_mode, image)))
+        elif state.is_offline():
+            continue
+        elif name == "gemini" and config.GEMINI_API_KEY:
+            model = config.GEMINI_VISION_MODEL if image else config.GEMINI_TEXT_MODEL
+            providers.append(("gemini", lambda model=model: _gemini(prompt, model, json_mode, image)))
+        elif name == "groq" and config.GROQ_API_KEY and not image:
+            providers.append(("groq", lambda: _groq(prompt, json_mode)))
     for name, fn in providers:
         t0 = time.time()
         try:

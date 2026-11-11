@@ -8,3 +8,4 @@ backend/var/
 .DS_Store
 .pytest_cache/
 frontend/dist/
+backend/models/

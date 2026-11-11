@@ -28,6 +28,19 @@ GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3")
 GROQ_TEXT_MODEL = os.getenv("GROQ_TEXT_MODEL", "llama-3.3-70b-versatile")
 AZURE_TTS_VOICE = os.getenv("AZURE_TTS_VOICE", "ur-PK-AsadNeural")
 
+# ---- Local, no-key AI (default for the demo) ----
+# Providers are tried in order; anything not installed / not configured is skipped automatically.
+STT_ORDER = os.getenv("STT_ORDER", "local,groq,gemini").split(",")
+LLM_ORDER = os.getenv("LLM_ORDER", "ollama,gemini,groq").split(",")
+TTS_ORDER = os.getenv("TTS_ORDER", "edge,azure").split(",")
+WHISPER_BIN = os.getenv("WHISPER_BIN", "whisper-cli")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", str(ROOT / "backend" / "models" / "ggml-large-v3-turbo-q5_0.bin"))
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:4b")
+EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "ur-PK-AsadNeural")
+# Compose the answer with the LLM (true) or speak the expert-reviewed KB text verbatim (false, safest).
+COMPOSE_WITH_LLM = os.getenv("COMPOSE_WITH_LLM", "false").lower() == "true"
+
 OFFLINE_MODE_DEFAULT = os.getenv("OFFLINE_MODE", "false").lower() == "true"
 
 # ---- Nil detection (escalation) ----

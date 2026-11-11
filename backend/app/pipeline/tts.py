@@ -21,35 +21,58 @@ def cached_url(text: str) -> str | None:
     return f"/media/tts/{f.name}" if f.exists() else None
 
 
+def _edge(text: str, out) -> None:
+    """Microsoft Edge's free neural voices (same ur-PK voices as Azure), no API key. Needs internet; results are cached."""
+    import asyncio
+
+    import edge_tts
+
+    async def go():
+        await edge_tts.Communicate(text, config.EDGE_TTS_VOICE, rate="-8%").save(str(out))
+    asyncio.run(go())
+
+
+def _azure(text: str, out) -> None:
+    ssml = (f"<speak version='1.0' xml:lang='ur-PK'><voice name='{config.AZURE_TTS_VOICE}'>"
+            f"<prosody rate='-8%'>{escape(text)}</prosody></voice></speak>")
+    r = httpx.post(f"https://{config.AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1",
+                   headers={"Ocp-Apim-Subscription-Key": config.AZURE_SPEECH_KEY, "Content-Type": "application/ssml+xml",
+                            "X-Microsoft-OutputFormat": FMT, "User-Agent": "awaazsaathi"},
+                   content=ssml.encode("utf-8"), timeout=20)
+    r.raise_for_status()
+    out.write_bytes(r.content)
+
+
+def edge_available() -> bool:
+    try:
+        import edge_tts  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def speak(text: str) -> str | None:
     """Returns a URL for an mp3 of `text`, or None if unavailable."""
     text = (text or "").strip()
     if not text:
         return None
     url = cached_url(text)
-    if url or state.is_offline() or not config.AZURE_SPEECH_KEY:
+    if url or state.is_offline():
         return url
-    ssml = (
-        f"<speak version='1.0' xml:lang='ur-PK'><voice name='{config.AZURE_TTS_VOICE}'>"
-        f"<prosody rate='-8%'>{escape(text)}</prosody></voice></speak>"
-    )
-    t0 = time.time()
-    try:
-        r = httpx.post(
-            f"https://{config.AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1",
-            headers={
-                "Ocp-Apim-Subscription-Key": config.AZURE_SPEECH_KEY,
-                "Content-Type": "application/ssml+xml",
-                "X-Microsoft-OutputFormat": FMT,
-                "User-Agent": "awaazsaathi",
-            },
-            content=ssml.encode("utf-8"),
-            timeout=20,
-        )
-        r.raise_for_status()
-        (config.TTS_DIR / _name(text)).write_bytes(r.content)
-        state.mark("tts", True, config.AZURE_TTS_VOICE, int((time.time() - t0) * 1000))
-        return cached_url(text)
-    except Exception as e:  # noqa: BLE001
-        state.mark("tts", False, str(e))
-        return None
+    out = config.TTS_DIR / _name(text)
+    providers = {"edge": (edge_available(), _edge, "edge-tts " + config.EDGE_TTS_VOICE),
+                 "azure": (bool(config.AZURE_SPEECH_KEY), _azure, "azure " + config.AZURE_TTS_VOICE)}
+    for name in config.TTS_ORDER:
+        ok, fn, label = providers.get(name.strip(), (False, None, ""))
+        if not ok:
+            continue
+        t0 = time.time()
+        try:
+            fn(text, out)
+            if out.exists() and out.stat().st_size > 500:
+                state.mark("tts", True, label, int((time.time() - t0) * 1000))
+                return cached_url(text)
+        except Exception as e:  # noqa: BLE001
+            out.unlink(missing_ok=True)
+            state.mark("tts", False, f"{label}: {e}")
+    return None
