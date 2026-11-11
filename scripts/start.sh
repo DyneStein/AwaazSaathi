@@ -8,6 +8,8 @@ if [ ! -d frontend/node_modules ]; then (cd frontend && npm install); fi
 if [ ! -f backend/static/index.html ] || [ -n "$(find frontend/src -newer backend/static/index.html -print -quit)" ]; then
   echo "Building front end..."; (cd frontend && npm run build >/dev/null)
 fi
+# Keep the local language model warm so the first answer is fast
+(command -v ollama >/dev/null && (pgrep -x ollama >/dev/null || (brew services start ollama >/dev/null 2>&1 || (nohup ollama serve >/tmp/ollama.log 2>&1 &))) && sleep 2 && curl -s localhost:11434/api/generate -d '{"model":"gemma3:4b","keep_alive":"60m"}' >/dev/null) || true
 cd backend && uv sync -q
 IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}')
 pkill -f "uvicorn app.main:app" 2>/dev/null || true
