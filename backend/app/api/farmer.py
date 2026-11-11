@@ -176,6 +176,12 @@ def farmer_queries(farmer_id: int, db=Depends(get_db)):
     return [query_out(q) for q in qs]
 
 
+@r.get("/farmer/lookup")
+def lookup(phone: str, db=Depends(get_db)):
+    f = db.query(Farmer).filter(Farmer.phone_hash == seed.hash_phone(phone)).first()
+    return {"farmer_id": f.id if f else None, "tehsil": f.tehsil if f else None}
+
+
 @r.get("/status")
 def status():
     return {"offline": state.is_offline()}
