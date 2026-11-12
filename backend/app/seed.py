@@ -61,10 +61,13 @@ def _history(db, e: Expert, rng: random.Random) -> None:
 
 def run() -> None:
     rng = random.Random(42)
-    Base.metadata.drop_all(engine)
+    # Rows are replaced inside one transaction instead of dropping the tables, so a page that polls the server
+    # in the middle of a reset sees either the old data or the new data, never a missing table.
     Base.metadata.create_all(engine)
     db = SessionLocal()
     try:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
         # Knowledge base
         for k in json.loads((config.BACKEND / "data" / "kb_seed.json").read_text("utf-8")):
             db.add(KBEntry(**k, needs_expert_review=True, source="seed"))

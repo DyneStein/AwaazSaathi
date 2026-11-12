@@ -32,7 +32,7 @@ class Hub:
     def publish(self, topic: str, event: str, data: dict | None = None) -> None:
         """Safe to call from sync code running in a worker thread."""
         payload = {"event": event, "data": data or {}}
-        if self.loop is None:
+        if self.loop is None or self.loop.is_closed():
             return
         try:
             running = asyncio.get_running_loop()

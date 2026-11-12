@@ -169,6 +169,13 @@ def kb(db=Depends(get_db)):
              "reviewed_at": iso(k.reviewed_at), "senior_only": k.senior_only} for k in db.query(KBEntry).order_by(KBEntry.id)]
 
 
+@r.get("/evaluation")
+def evaluation(db=Depends(get_db)):
+    """Runs the labelled safety set through the live decision rules (rules only, about a second)."""
+    from ..pipeline import evaluate
+    return evaluate.run(db)
+
+
 @r.post("/rebuild-index")
 def rebuild(db=Depends(get_db)):
     retrieval.rebuild(db)

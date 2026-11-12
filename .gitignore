@@ -8,3 +8,6 @@ backend/var/
 .pytest_cache/
 frontend/dist/
 backend/models/
+e2e/test-results/
+e2e/screenshots/
+e2e/playwright-report/

@@ -56,3 +56,20 @@ button { cursor: pointer; }
 @keyframes eq { 0%, 100% { height: 5px } 50% { height: 16px } }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 @media (prefers-reduced-motion: reduce) { .ring-pulse, .eq span, .drop-in, .sheet-in { animation: none; } }
+
+/* Keypad phone */
+.kp-body { background: linear-gradient(160deg, #39434A 0%, #252D32 45%, #1B2226 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.45), 0 26px 50px -20px rgba(16,30,24,.55); }
+.kp-lcd { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: #1B2A16; background-color: #B7C6A0; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.045) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.03) 0 1px, transparent 1px 3px); box-shadow: inset 0 2px 6px rgba(0,0,0,.35); transition: background-color .4s; }
+.kp-lcd[data-lit="false"] { background-color: #8F9C80; }
+.kp-key { background: linear-gradient(180deg, #F4F6F4, #D5DAD6); color: #1B2226; border-radius: 14px / 12px; box-shadow: 0 2px 0 #0E1316, inset 0 1px 0 #fff; transition: transform .05s, box-shadow .05s; }
+.kp-key:active, .kp-key[data-down="true"] { transform: translateY(2px); box-shadow: 0 0 0 #0E1316, inset 0 1px 0 #fff; background: #C3CAC5; }
+.kp-key:disabled { opacity: .55; }
+.kp-soft { background: linear-gradient(180deg, #4A555C, #343D43); color: #E6EAE7; border-radius: 10px; box-shadow: 0 2px 0 #0E1316, inset 0 1px 0 rgba(255,255,255,.15); }
+.kp-soft:active { transform: translateY(2px); box-shadow: none; }
+@keyframes blink { 50% { opacity: .15 } }
+.kp-blink { animation: blink 1s steps(1) infinite; }
+@keyframes shake { 0%, 100% { transform: rotate(0) } 20% { transform: rotate(-1.2deg) } 40% { transform: rotate(1.2deg) } 60% { transform: rotate(-.8deg) } 80% { transform: rotate(.8deg) } }
+.kp-ringing { animation: shake .45s linear infinite; }
+.bubble-in { background: #fff; border: 1px solid var(--color-line); border-radius: 4px 16px 16px 16px; }
+.bubble-out { background: #DDF0E3; border: 1px solid #C5E2CF; border-radius: 16px 4px 16px 16px; }
+@media (prefers-reduced-motion: reduce) { .kp-blink, .kp-ringing { animation: none; } }

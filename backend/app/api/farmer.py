@@ -35,6 +35,12 @@ def personas():
             "canned": {k: {"label": v["label"], "transcript": v["transcript"], "crop": v["crop"]} for k, v in prompts.CANNED.items()}}
 
 
+def _tehsil_prompt(lang: str, tehsil: str) -> dict:
+    text = prompts.tehsil_confirm(lang, outbreak.TEHSILS.get(tehsil, {}).get("ur", tehsil))
+    tts.speak_later([text])
+    return {"text": text, "audio_url": tts.cached_url(text)}
+
+
 class StartIn(BaseModel):
     phone: str
     language: str = "pa"
@@ -54,7 +60,8 @@ def call_start(body: StartIn, db=Depends(get_db)):
     db.add(c)
     db.commit()
     return {"call_id": c.id, "farmer_id": f.id, "tehsil": f.tehsil,
-            "tehsil_ur": outbreak.TEHSILS.get(f.tehsil, {}).get("ur", f.tehsil), "known": known}
+            "tehsil_ur": outbreak.TEHSILS.get(f.tehsil, {}).get("ur", f.tehsil), "known": known,
+            "tehsil_confirm": _tehsil_prompt(c.language, f.tehsil)}
 
 
 class LangIn(BaseModel):
@@ -70,7 +77,7 @@ def set_language(call_id: int, body: LangIn, db=Depends(get_db)):
     f = db.get(Farmer, c.farmer_id)
     f.language = c.language
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "tehsil_confirm": _tehsil_prompt(c.language, f.tehsil)}
 
 
 class TehsilIn(BaseModel):
@@ -90,7 +97,8 @@ def set_tehsil(call_id: int, body: TehsilIn, db=Depends(get_db)):
 
 def _result(q: Query, engine: str = "", lang: str = "ur") -> dict:
     escalated = q.status != "answered_ai"
-    esc = prompts.prompts_for(lang)["escalated"]
+    emergency = any(r.startswith("health_emergency") for r in (q.reasons or []))
+    esc = prompts.prompts_for(lang)["emergency" if emergency else "escalated"]
     return {"query": query_out(q), "escalated": escalated, "stt_engine": engine,
             "answer_text": q.final_answer if not escalated else esc,
             "answer_audio": q.final_audio_url if not escalated else tts.speak(esc)}
@@ -98,7 +106,7 @@ def _result(q: Query, engine: str = "", lang: str = "ur") -> dict:
 
 @r.post("/call/{call_id}/ask")
 def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript: str = Form(""), category: str = Form(""),
-        audio: UploadFile | None = File(None), db=Depends(get_db)):
+        channel: str = Form("voice"), audio: UploadFile | None = File(None), db=Depends(get_db)):
     c = db.get(Call, call_id)
     if not c:
         raise HTTPException(404, "call not found")
@@ -119,7 +127,8 @@ def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript
     if not transcript.strip():
         raise HTTPException(400, "empty question")
     q = trust_router.process(db, farmer=f, call_id=call_id, crop=crop, duration=duration,
-                             transcript=transcript.strip(), audio_url=audio_url, category=category or None)
+                             transcript=transcript.strip(), audio_url=audio_url, category=category or None,
+                             channel="chat" if channel == "chat" else "voice")
     return _result(q, engine, c.language)
 
 
@@ -212,8 +221,10 @@ def consent(call_id: int, body: ConsentIn, db=Depends(get_db)):
 @r.get("/farmer/{farmer_id}/inbox")
 def inbox(farmer_id: int, db=Depends(get_db)):
     items = db.query(InboxItem).filter(InboxItem.farmer_id == farmer_id).order_by(InboxItem.id.desc()).all()
+    channels = {q.id: q.channel for q in db.query(Query).filter(Query.farmer_id == farmer_id)}
     return [{"id": i.id, "kind": i.kind, "title_ur": i.title_ur, "text_ur": i.text_ur, "audio_url": i.audio_url,
-             "query_id": i.query_id, "heard": i.heard, "created_at": iso(i.created_at)} for i in items]
+             "query_id": i.query_id, "heard": i.heard, "created_at": iso(i.created_at),
+             "channel": channels.get(i.query_id, "voice")} for i in items]
 
 
 @r.post("/inbox/{item_id}/heard")

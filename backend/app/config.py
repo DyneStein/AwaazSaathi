@@ -47,6 +47,9 @@ OFFLINE_MODE_DEFAULT = os.getenv("OFFLINE_MODE", "false").lower() == "true"
 # ---- Nil detection (escalation) ----
 RETRIEVAL_MIN = _f("RETRIEVAL_MIN", 0.30)   # below this the KB doesn't know -> human
 GROUNDING_MIN = _f("GROUNDING_MIN", 0.6)    # share of answer 3-grams found in retrieved text
+STRONG_MATCH = _f("STRONG_MATCH", 0.40)       # at or above this the match stands on its own
+MIN_EVIDENCE_TERMS = 3                        # a weaker match needs this many of the farmer's own symptom words in the source
+AMBIGUITY_MARGIN = _f("AMBIGUITY_MARGIN", 0.04)  # top two different problems closer than this -> human decides
 OUTBREAK_SUSPECT_PRIOR = 2                  # >=2 prior similar cases nearby -> treat as suspected outbreak
 
 # ---- Outbreak engine ----
@@ -63,8 +66,9 @@ SLA_HOURS = {"senior_only": 2, "high": 3, "normal": 6}
 SENIOR_PAY_PER_REVIEW_PKR = 150   # MOCK: sponsor-funded, no real payments
 JUNIOR_SPONSOR_PER_APPROVED_PKR = 50  # MOCK: NGO/government sponsorship
 
-DB_PATH = BACKEND / "var" / "awaaz.db"
-VAR = BACKEND / "var"
+# AWAAZ_VAR points the database, uploads and recordings somewhere else (the browser tests use a throwaway folder).
+VAR = Path(os.getenv("AWAAZ_VAR") or BACKEND / "var")
+DB_PATH = VAR / "awaaz.db"
 MEDIA = BACKEND / "media"
 TTS_DIR = MEDIA / "tts"          # committed cache: demo speaks even with no internet
 UPLOAD_DIR = VAR / "uploads"

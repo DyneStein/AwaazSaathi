@@ -1,0 +1,15 @@
+{
+ "v": {
+  "crop": "wheat",
+  "disease_tag": "wheat_brown_rust",
+  "symptoms_ur": [
+   "پتوں پر لکیریں ہیں",
+   "پتوں کی خمیدگی کا نشانہ دیکھا جا رہا ہے"
+  ],
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": false,
+  "normalized_query_ur": "پتوں پر لکیریں ہیں اور پتوں کی خمیدگی کا نشانہ دیکھا جا رہا ہے، یہ کالی مکھیوں کی وجہ سے ہو سکتا ہے."
+ },
+ "provider": "ollama:gemma3:4b"
+}

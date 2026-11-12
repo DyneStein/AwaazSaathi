@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "cotton",
+  "disease_tag": "cotton_jassid",
+  "symptoms_ur": "میرے کپاس کے پتوں پر کیڑے لگ گئے ہیں۔",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": false,
+  "normalized_query_ur": "کپاس کے پتوں پر کیڑے لگ گئے ہیں۔"
+ },
+ "provider": "ollama:gemma3:4b"
+}

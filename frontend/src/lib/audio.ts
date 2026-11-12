@@ -78,7 +78,8 @@ export function useRecorder() {
   }
   const stop = () => new Promise<Blob | null>((resolve) => {
     const r = rec.current
-    if (!r) return resolve(null)
+    if (!r || r.state === 'inactive') { rec.current = null; setRecording(false); return resolve(null) }   // already stopped: nothing to hand back
+    rec.current = null
     r.onstop = () => {
       r.stream.getTracks().forEach((t) => t.stop())
       setRecording(false)

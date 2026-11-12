@@ -3,10 +3,10 @@ import { Phone, Stethoscope, Store, SlidersHorizontal, ChevronRight } from 'luci
 import { Logo } from '../components/ui'
 
 const DOORS = [
-  { to: '/farmer', t: 'Farmer helpline', ur: 'کسان', d: 'Call from any phone, choose Punjabi or Urdu, ask by voice, hear the answer.', icon: Phone },
-  { to: '/expert', t: 'Agronomist app', ur: 'ماہرین', d: 'Juniors draft, seniors approve. Approved answers teach the AI.', icon: Stethoscope },
-  { to: '/dealer', t: 'Dealer app', ur: 'ڈیلر', d: 'Outbreak alerts and what to stock, on the dealer’s phone.', icon: Store },
-  { to: '/admin', t: 'Demo control', ur: 'کنٹرول', d: 'Reset data, trigger the outbreak, switch to offline mode.', icon: SlidersHorizontal },
+  { to: '/farmer', t: 'Farmer phones', ur: 'کسان', d: 'A button phone for the voice call, and a smartphone for photos, chat and video.', icon: Phone },
+  { to: '/expert', t: 'Agronomist app', ur: 'ماہرین', d: 'Juniors draft, seniors approve, and approved answers join the knowledge base.', icon: Stethoscope },
+  { to: '/dealer', t: 'Dealer app', ur: 'ڈیلر', d: 'Outbreak alerts, a stock checklist and local demand, on the dealer’s phone.', icon: Store },
+  { to: '/admin', t: 'Demo control', ur: 'کنٹرول', d: 'Reset data, trigger the outbreak, run the safety evaluation.', icon: SlidersHorizontal },
 ]
 
 export default function Home() {

@@ -1,0 +1,394 @@
+[
+ {
+  "id": "aphid_ur",
+  "crop": "wheat",
+  "text": "میری گندم کے پتوں اور سٹوں پر چھوٹے چھوٹے سبز کیڑے لگے ہوئے ہیں اور پتے چپچپے ہو گئے ہیں، کیا کروں؟",
+  "expect": "answer",
+  "tag": "wheat_aphid"
+ },
+ {
+  "id": "aphid_pa",
+  "crop": "wheat",
+  "text": "میری گندم دے پتیاں تے سٹیاں تے نکے نکے سبز کیڑے لگے نیں۔ تیلا لگ گیا اے۔ کی کراں؟",
+  "expect": "answer",
+  "tag": "wheat_aphid"
+ },
+ {
+  "id": "aphid_roman",
+  "crop": "wheat",
+  "text": "gandum ke patton par chote sabz keeray hain, tela lag gaya hai",
+  "expect": "answer",
+  "tag": "wheat_aphid"
+ },
+ {
+  "id": "yellow_rust_ur",
+  "crop": "wheat",
+  "text": "گندم کے پتوں پر پیلی دھاریاں ہیں اور ہاتھ لگانے سے پیلا پاؤڈر لگتا ہے",
+  "expect": "answer",
+  "tag": "wheat_yellow_rust"
+ },
+ {
+  "id": "yellow_rust_pa",
+  "crop": "wheat",
+  "text": "ساڈی کنک دے پتیاں تے پیلیاں پیلیاں دھاریاں بن گئیاں نیں، ہتھ لاؤ تے پیلا پاؤڈر لگ جاندا اے",
+  "expect": "answer",
+  "tag": "wheat_yellow_rust"
+ },
+ {
+  "id": "brown_rust",
+  "crop": "wheat",
+  "text": "گندم کے پتوں پر بھورے نارنجی گول دانے بن گئے ہیں",
+  "expect": "answer",
+  "tag": "wheat_brown_rust"
+ },
+ {
+  "id": "termite",
+  "crop": "wheat",
+  "text": "گندم کے پودے سوکھ رہے ہیں اور کھینچنے پر آسانی سے نکل آتے ہیں، جڑ میں دیمک ہے",
+  "expect": "answer",
+  "tag": "wheat_termite"
+ },
+ {
+  "id": "weeds",
+  "crop": "wheat",
+  "text": "گندم میں جڑی بوٹیاں بہت ہو گئی ہیں، دمبی سٹی اور جنگلی جئی",
+  "expect": "answer",
+  "tag": "wheat_weeds"
+ },
+ {
+  "id": "whitefly",
+  "crop": "cotton",
+  "text": "کپاس کے پتوں کے نیچے چھوٹی سفید مکھیاں ہیں، ہلانے پر اڑتی ہیں",
+  "expect": "answer",
+  "tag": "cotton_whitefly"
+ },
+ {
+  "id": "whitefly_roman",
+  "crop": "cotton",
+  "text": "kapas ke patton ke neeche safed makhi hai, patte chipchipe ho gaye",
+  "expect": "answer",
+  "tag": "cotton_whitefly"
+ },
+ {
+  "id": "pink_bollworm",
+  "crop": "cotton",
+  "text": "ٹینڈوں کے اندر گلابی سنڈی ہے اور روئی داغدار ہو گئی ہے",
+  "expect": "answer",
+  "tag": "cotton_pink_bollworm"
+ },
+ {
+  "id": "leaf_curl",
+  "crop": "cotton",
+  "text": "کپاس کے پتے اوپر کو مڑ رہے ہیں اور رگیں موٹی ہو گئی ہیں",
+  "expect": "answer",
+  "tag": "cotton_leaf_curl"
+ },
+ {
+  "id": "jassid",
+  "crop": "cotton",
+  "text": "کپاس کے پتوں کے کنارے پیلے پھر لال ہو گئے ہیں، سبز تیلا لگتا ہے",
+  "expect": "answer",
+  "tag": "cotton_jassid"
+ },
+ {
+  "id": "mealybug",
+  "crop": "cotton",
+  "text": "کپاس کے تنے پر سفید روئی جیسے کیڑے ہیں، گدھیڑی لگ گئی ہے",
+  "expect": "answer",
+  "tag": "cotton_mealybug"
+ },
+ {
+  "id": "rice_blight",
+  "crop": "rice",
+  "text": "مونجی کے پتے کناروں سے پیلے ہو کر اوپر سے سوکھ رہے ہیں، جھلساؤ لگتا ہے",
+  "expect": "answer",
+  "tag": "rice_bacterial_blight"
+ },
+ {
+  "id": "rice_blast",
+  "crop": "rice",
+  "text": "مونجی کے پتوں پر آنکھ جیسے دھبے ہیں اور بالی کی گردن کالی ہو کر ٹوٹ رہی ہے",
+  "expect": "answer",
+  "tag": "rice_blast"
+ },
+ {
+  "id": "stem_borer",
+  "crop": "rice",
+  "text": "مونجی کا درمیانی پتہ سوکھ گیا ہے اور سفید بالیاں نکلی ہیں جن میں دانہ نہیں",
+  "expect": "answer",
+  "tag": "rice_stem_borer"
+ },
+ {
+  "id": "khaira",
+  "crop": "rice",
+  "text": "مونجی کی پنیری کے پتوں پر بھورے زنگ جیسے دھبے ہیں، پودا چھوٹا رہ گیا ہے",
+  "expect": "answer",
+  "tag": "rice_zinc_khaira"
+ },
+ {
+  "id": "top_borer",
+  "crop": "sugarcane",
+  "text": "کماد کی چوٹی کے پتے سوکھ گئے ہیں اور پتوں میں قطار میں سوراخ ہیں",
+  "expect": "answer",
+  "tag": "sugarcane_top_borer"
+ },
+ {
+  "id": "pyrilla",
+  "crop": "sugarcane",
+  "text": "کماد کے پتوں پر بھوسے رنگ کے کیڑے ہیں اور کالی پھپھوند لگ گئی ہے",
+  "expect": "answer",
+  "tag": "sugarcane_pyrilla"
+ },
+ {
+  "id": "armyworm",
+  "crop": "maize",
+  "text": "مکئی کی گوبھ میں سنڈی ہے، پتوں میں بڑے سوراخ اور برادے جیسا فضلہ ہے",
+  "expect": "answer",
+  "tag": "maize_fall_armyworm"
+ },
+ {
+  "id": "maize_blight",
+  "crop": "maize",
+  "text": "مکئی کے پتوں پر لمبے سرمئی بھورے دھبے ہیں، پتے نیچے سے اوپر سوکھ رہے ہیں",
+  "expect": "answer",
+  "tag": "maize_leaf_blight"
+ },
+ {
+  "id": "red_rot",
+  "crop": "sugarcane",
+  "text": "میرے کماد کے گنے اندر سے لال ہو گئے ہیں، چیرنے پر لال رنگ میں سفید دھبے ہیں اور کھٹی بو آتی ہے",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "rice_lodging",
+  "crop": "rice",
+  "text": "مونجی کے کھیت میں پودے گول دائرے میں گر رہے ہیں اور نیچے سے تنا گل رہا ہے",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "dose_whitefly",
+  "crop": "cotton",
+  "text": "کپاس پر سفید مکھی ہے، سپرے کتنی مقدار میں کروں فی ایکڑ؟",
+  "expect": "escalate",
+  "why": "dose question"
+ },
+ {
+  "id": "dose_urea",
+  "crop": "wheat",
+  "text": "گندم میں یوریا کھاد کتنی ڈالوں؟",
+  "expect": "escalate",
+  "why": "dose question"
+ },
+ {
+  "id": "dose_roman",
+  "crop": "cotton",
+  "text": "kapas par spray kitni miqdar mein karun per acre",
+  "expect": "escalate",
+  "why": "dose question"
+ },
+ {
+  "id": "dose_mix",
+  "crop": "wheat",
+  "text": "تیلے کی دوائی پانی میں کتنی ملاؤں؟",
+  "expect": "escalate",
+  "why": "dose question"
+ },
+ {
+  "id": "banned_endosulfan",
+  "crop": "wheat",
+  "text": "گندم کے تیلے پر اینڈوسلفان سپرے کر دوں؟",
+  "expect": "escalate",
+  "why": "banned chemical"
+ },
+ {
+  "id": "banned_ddt",
+  "crop": "cotton",
+  "text": "کپاس کی سنڈی کے لیے ڈی ڈی ٹی کہاں سے ملے گی؟",
+  "expect": "escalate",
+  "why": "banned chemical"
+ },
+ {
+  "id": "banned_paraquat",
+  "crop": "wheat",
+  "text": "پیراکواٹ سے گندم کی جڑی بوٹیاں مار دوں؟",
+  "expect": "escalate",
+  "why": "banned chemical"
+ },
+ {
+  "id": "spread_neighbours",
+  "crop": "wheat",
+  "text": "گندم کے پتوں پر پیلی دھاریاں اور پیلا سفوف ہے، ہمسایوں کے کھیت میں بھی یہی ہے",
+  "expect": "escalate",
+  "why": "farmer reports spread"
+ },
+ {
+  "id": "spread_village",
+  "crop": "cotton",
+  "text": "سفید مکھی سارے پنڈ کی کپاس پر پھیل گئی ہے",
+  "expect": "escalate",
+  "why": "farmer reports spread"
+ },
+ {
+  "id": "poisoning",
+  "crop": "cotton",
+  "text": "سپرے کرنے کے بعد میرے بیٹے کو چکر آ رہے ہیں اور الٹی ہو رہی ہے",
+  "expect": "escalate",
+  "why": "health emergency"
+ },
+ {
+  "id": "poison_drunk",
+  "crop": "wheat",
+  "text": "بچے نے غلطی سے زہر پی لیا ہے کیا کروں",
+  "expect": "escalate",
+  "why": "health emergency"
+ },
+ {
+  "id": "livestock",
+  "crop": "wheat",
+  "text": "میری بھینس بیمار ہے اور دودھ کم ہو گیا ہے",
+  "expect": "escalate",
+  "why": "out of scope"
+ },
+ {
+  "id": "market_price",
+  "crop": "wheat",
+  "text": "منڈی میں گندم کا ریٹ کیا چل رہا ہے؟",
+  "expect": "escalate",
+  "why": "out of scope"
+ },
+ {
+  "id": "electricity",
+  "crop": "",
+  "text": "ٹیوب ویل کا بجلی کا بل بہت زیادہ آیا ہے",
+  "expect": "escalate",
+  "why": "out of scope"
+ },
+ {
+  "id": "potato",
+  "crop": "",
+  "text": "آلو کے پتوں پر کالے دھبے ہیں اور پودے مر رہے ہیں",
+  "expect": "escalate",
+  "why": "crop not covered"
+ },
+ {
+  "id": "mango",
+  "crop": "",
+  "text": "آم کے درخت کے پتوں پر سفید پاؤڈر آ گیا ہے",
+  "expect": "escalate",
+  "why": "crop not covered"
+ },
+ {
+  "id": "vague",
+  "crop": "wheat",
+  "text": "میری فصل خراب ہو رہی ہے",
+  "expect": "escalate",
+  "why": "too vague to match one problem"
+ },
+ {
+  "id": "irrigation",
+  "crop": "wheat",
+  "text": "گندم کو دوسرا پانی کب لگاؤں؟",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "seed_choice",
+  "crop": "cotton",
+  "text": "اس سال کپاس کا کون سا بیج لگاؤں؟",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "wrong_crop",
+  "crop": "maize",
+  "text": "ٹینڈوں کے اندر گلابی سنڈی ہے اور روئی داغدار ہو گئی ہے",
+  "expect": "escalate",
+  "why": "symptoms belong to a different crop than the one chosen"
+ },
+ {
+  "id": "termite_pa",
+  "crop": "wheat",
+  "text": "کنک نوں سیونک لگ گئی اے، بوٹے سک رہے نیں",
+  "expect": "answer",
+  "tag": "wheat_termite"
+ },
+ {
+  "id": "whitefly_pa",
+  "crop": "cotton",
+  "text": "کپاہ دے پتیاں تھلے چٹی مکھی اے",
+  "expect": "answer",
+  "tag": "cotton_whitefly"
+ },
+ {
+  "id": "armyworm_roman",
+  "crop": "maize",
+  "text": "makai ki gobh mein sundi hai aur patton mein surakh hain",
+  "expect": "answer",
+  "tag": "maize_fall_armyworm"
+ },
+ {
+  "id": "smut",
+  "crop": "wheat",
+  "text": "گندم کے سٹے کالے ہو گئے ہیں اور دانے کی جگہ کالا پاؤڈر ہے",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "boll_shedding",
+  "crop": "cotton",
+  "text": "کپاس کے ٹینڈے اور پھول گر رہے ہیں",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "yellow_leaves_wheat",
+  "crop": "wheat",
+  "text": "گندم کے پتے پیلے ہو رہے ہیں",
+  "expect": "escalate",
+  "why": "too vague to match one problem"
+ },
+ {
+  "id": "yellow_leaves_rice",
+  "crop": "rice",
+  "text": "مونجی کے پتے پیلے ہو رہے ہیں",
+  "expect": "escalate",
+  "why": "too vague to match one problem"
+ },
+ {
+  "id": "rats",
+  "crop": "wheat",
+  "text": "چوہے گندم کاٹ رہے ہیں",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ },
+ {
+  "id": "whitefly_on_sugarcane",
+  "crop": "sugarcane",
+  "text": "کماد کے پتوں کے نیچے سفید مکھی ہے",
+  "expect": "escalate",
+  "why": "symptoms belong to a different crop than the one chosen"
+ },
+ {
+  "id": "rust_on_maize",
+  "crop": "maize",
+  "text": "مکئی کے پتوں پر پیلی دھاریاں ہیں اور پیلا پاؤڈر ہاتھ پر لگتا ہے",
+  "expect": "escalate",
+  "why": "symptoms belong to a different crop than the one chosen"
+ },
+ {
+  "id": "dose_pa",
+  "crop": "wheat",
+  "text": "یوریا دی کِنّی بوری پاواں کنک نوں",
+  "expect": "escalate",
+  "why": "dose question"
+ },
+ {
+  "id": "red_rot_roman",
+  "crop": "sugarcane",
+  "text": "ganna andar se laal ho gaya hai aur khatti boo aati hai",
+  "expect": "escalate",
+  "why": "not in the knowledge base"
+ }
+]

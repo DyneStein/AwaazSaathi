@@ -62,6 +62,41 @@ def confirm(alert_id: int, db=Depends(get_db)):
     return {"ok": True, "confirmed_at": iso(a.confirmed_at)}
 
 
+class ItemIn(BaseModel):
+    index: int
+    ready: bool
+
+
+@r.post("/alerts/{alert_id}/item")
+def set_item(alert_id: int, body: ItemIn, db=Depends(get_db)):
+    """Tick one line of the stock checklist ("I have this in the shop")."""
+    a = db.get(DealerAlert, alert_id)
+    if not a or not (0 <= body.index < len(a.products or [])):
+        raise HTTPException(404)
+    items = [dict(p) for p in a.products]
+    items[body.index]["ready"] = body.ready
+    a.products = items  # reassign so the JSON column is saved
+    db.commit()
+    return {"ok": True, "products": items}
+
+
+@r.get("/{dealer_id}/overview")
+def overview(dealer_id: int, db=Depends(get_db)):
+    """Home screen: the dealer's area, today's weather and how many farmers it covers."""
+    from ..models import Farmer
+    d = db.get(Dealer, dealer_id)
+    if not d:
+        raise HTTPException(404)
+    area = [d.tehsil] + outbreak.TEHSILS.get(d.tehsil, {}).get("neighbors", [])
+    since = now() - timedelta(days=7)
+    reports = (db.query(func.count(func.distinct(Query.farmer_id)))
+               .filter(Query.tehsil.in_(area), Query.created_at >= since, Query.disease_tag.isnot(None)).scalar())
+    return {"tehsil": d.tehsil, "tehsil_ur": outbreak.TEHSILS.get(d.tehsil, {}).get("ur", d.tehsil), "area": area,
+            "district": outbreak.TEHSILS.get(d.tehsil, {}).get("district"), "weather": outbreak.weather(d.tehsil),
+            "farmers_in_area": db.query(Farmer).filter(Farmer.tehsil.in_(area)).count(), "farmers_reporting": reports or 0,
+            "active_outbreaks": db.query(Outbreak).filter(Outbreak.tehsil.in_(area), Outbreak.status == "active").count()}
+
+
 @r.get("/demand")
 def demand(db=Depends(get_db)):
     """Farmer reports per tehsil x problem in the last 7 days (what dealers should expect)."""

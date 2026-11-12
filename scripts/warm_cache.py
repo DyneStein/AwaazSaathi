@@ -14,6 +14,12 @@ print("Generating prompt audio...")
 for lang in ("ur", "pa"):
     for k, t in prompts.prompts_for(lang).items():
         print(f"  {'ok ' if tts.speak(t) else 'NO '} {lang} {k}")
+print("Spoken tehsil names (a button phone cannot show them)...")
+import json  # noqa: E402
+from app import config  # noqa: E402
+for lang in ("ur", "pa"):
+    for t in json.loads((config.BACKEND / "data" / "tehsils.json").read_text("utf-8")).values():
+        tts.speak(prompts.tehsil_confirm(lang, t["ur"]))
 print("Escalation + callback texts...")
 tts.speak(prompts.PROMPTS["escalated"])
 seed.run()

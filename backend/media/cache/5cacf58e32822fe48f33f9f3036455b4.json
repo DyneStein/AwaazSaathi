@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "wheat",
+  "disease_tag": "wheat_yellow_rust",
+  "symptoms_ur": "میری گندم کی فصل زیادہ پیلی پڑ گئی ہے۔",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": false,
+  "normalized_query_ur": "میری گندم کی فصل زیادہ پیلی پڑ گئی ہے، کیا اس کا علاج ہے؟"
+ },
+ "provider": "ollama:gemma3:4b"
+}

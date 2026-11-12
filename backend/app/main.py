@@ -48,6 +48,7 @@ async def lifespan(_app):
     task = asyncio.create_task(_sla_loop())
     yield
     task.cancel()
+    hub.loop = None
 
 
 app = FastAPI(title="AwaazSaathi", lifespan=lifespan)

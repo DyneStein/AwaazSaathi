@@ -8,6 +8,11 @@ Escalate if ANY of:
   4. banned or restricted chemical mentioned  -> senior only
   5. suspected outbreak                       -> senior only
   6. top KB entry is marked senior_only       -> senior only
+  7. health emergency (poisoning symptoms)    -> senior only, top priority, farmer told to go to hospital
+  8. best source is for a different crop      (the farmer chose another crop on the keypad)
+  9. two different problems match equally     (ambiguous, a human must tell them apart)
+ 10. weak match with thin evidence            (score under STRONG_MATCH and fewer than MIN_EVIDENCE_TERMS of the
+                                               farmer's own symptom words appear in the source: too vague to diagnose)
 """
 import re
 from dataclasses import dataclass, field
@@ -29,6 +34,11 @@ BANNED_CHEMICALS = [
 ]
 SPREAD_WORDS = ["پورا کھیت", "سارا کھیت", "سارے کھیت", "پورے علاقے", "سارا علاقہ", "سارے علاقے", "پورے پنڈ", "سارا پنڈ",
                 "سارے پنڈ", "پورا گاؤں", "سارے گاؤں", "ہمسایوں", "گوانڈیاں", "سب کے کھیت", "پھیل رہی", "پھیل رہا", "پھیل گئی"]
+
+
+# A person may have been poisoned: never an AI answer. Phrases, not single words ("زہر" alone also means pesticide).
+EMERGENCY_WORDS = ["چکر آ", "الٹی", "الٹیاں", "بے ہوش", "بیہوش", "زہر پی", "زہر کھا", "دوائی پی", "سپرے پی", "سانس نہیں", "سانس رک",
+                   "آنکھ میں چلا", "آنکھوں میں چلا", "behosh", "ulti", "chakkar", "zehar pi", "poisoned"]
 
 
 @dataclass
@@ -64,13 +74,18 @@ def grounding_score(answer: str, sources: list[str]) -> float:
 
 def decide(*, transcript: str, retrieval_score: float, grounding: float, top_senior_only: bool,
            llm_asks_dose: bool = False, llm_chemicals: list[str] | None = None, llm_spread: bool = False,
-           prior_similar_cases: int = 0,
+           prior_similar_cases: int = 0, crop_mismatch: str | None = None, ambiguous: str | None = None,
+           evidence_terms: int | None = None,
            retrieval_min: float | None = None, grounding_min: float | None = None) -> Decision:
     rmin = config.RETRIEVAL_MIN if retrieval_min is None else retrieval_min
     gmin = config.GROUNDING_MIN if grounding_min is None else grounding_min
     reasons: list[str] = []
     senior = False
 
+    emergency = _has(transcript, EMERGENCY_WORDS)
+    if emergency:
+        reasons.append(f"health_emergency: {', '.join(emergency)}")
+        senior = True
     dose = _has(transcript, DOSE_STRONG)
     if not dose and _has(transcript, DOSE_CONTEXT):
         dose = _has(transcript, DOSE_WEAK)
@@ -91,6 +106,12 @@ def decide(*, transcript: str, retrieval_score: float, grounding: float, top_sen
         senior = True
     if retrieval_score < rmin:
         reasons.append(f"low_retrieval: {retrieval_score:.2f} < {rmin:.2f}")
+    elif crop_mismatch:
+        reasons.append(f"crop_mismatch: {crop_mismatch}")
+    elif ambiguous:
+        reasons.append(f"ambiguous_match: {ambiguous}")
+    elif evidence_terms is not None and retrieval_score < config.STRONG_MATCH and evidence_terms < config.MIN_EVIDENCE_TERMS:
+        reasons.append(f"thin_evidence: score {retrieval_score:.2f} with only {evidence_terms} matching symptom words")
     elif grounding < gmin:
         reasons.append(f"not_grounded: {grounding:.2f} < {gmin:.2f}")
 

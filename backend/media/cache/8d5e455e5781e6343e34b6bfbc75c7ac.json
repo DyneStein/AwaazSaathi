@@ -1,0 +1,12 @@
+{
+ "v": {
+  "crop": "wheat",
+  "disease_tag": "wheat_brown_rust",
+  "symptoms_ur": "میری گندم کی فصل کے پتوں پر کیڑے لگے ہیں۔",
+  "asks_dose": false,
+  "chemicals": [],
+  "spread": false,
+  "normalized_query_ur": "میری گندم کی فصل کے پتوں پر کیڑے لگے ہیں۔"
+ },
+ "provider": "ollama:gemma3:4b"
+}

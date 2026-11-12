@@ -21,6 +21,41 @@ def experts(db=Depends(get_db)):
     return [expert_out(e) for e in db.query(Expert).order_by(Expert.id)]
 
 
+@r.get("/kb")
+def knowledge(q: str = "", crop: str = "", db=Depends(get_db)):
+    """The knowledge base the AI answers from: what experts browse, check and extend."""
+    rows = db.query(KBEntry).order_by(KBEntry.id.desc()).all()
+    if crop:
+        rows = [k for k in rows if k.crop == crop]
+    if q.strip():
+        rank = {d.id: i for i, (d, s) in enumerate(retrieval.index.search(q, k=8)) if s > 0.05}
+        rows = sorted((k for k in rows if k.id in rank), key=lambda k: rank[k.id])   # best match first
+    return [{"id": k.id, "crop": k.crop, "disease_tag": k.disease_tag, "title_ur": k.title_ur, "title_en": k.title_en,
+             "symptoms_ur": k.symptoms_ur, "answer_ur": k.answer_ur, "senior_only": k.senior_only, "source": k.source,
+             "needs_expert_review": k.needs_expert_review, "reviewed_by": k.reviewed_by, "reviewed_at": iso(k.reviewed_at)}
+            for k in rows]
+
+
+class SignOffIn(BaseModel):
+    reviewer_id: int
+
+
+@r.post("/kb/{kb_id}/sign-off")
+def sign_off(kb_id: int, body: SignOffIn, db=Depends(get_db)):
+    """A senior agronomist confirms a seed entry is correct. Until then it is shown as awaiting sign-off."""
+    k, rev = db.get(KBEntry, kb_id), db.get(Expert, body.reviewer_id)
+    if not k or not rev:
+        raise HTTPException(404)
+    if rev.level != "senior":
+        raise HTTPException(403, "Only senior agronomists can sign off knowledge entries.")
+    k.needs_expert_review, k.reviewed_by, k.reviewed_at = False, rev.name, now()
+    db.add(EventLog(kind="kb", message=f"{rev.name} signed off knowledge entry #{k.id} ({k.title_en})"))
+    db.commit()
+    retrieval.rebuild(db)
+    hub.publish("expert", "kb_signed", {"kb_id": k.id})
+    return {"ok": True, "reviewed_by": rev.name}
+
+
 @r.get("/{expert_id}/profile")
 def profile(expert_id: int, db=Depends(get_db)):
     e = db.get(Expert, expert_id)
@@ -84,7 +119,7 @@ def finalize(db, q: Query, text: str, by: Expert, audio_url: str | None = None) 
     db.add(EventLog(kind="sms_mock", message=f"[MOCK SMS/WhatsApp] backup text of answer #{q.id} sent to farmer"))
     db.commit()
     hub.publish(f"farmer:{q.farmer_id}", "callback", {"query_id": q.id, "text": text, "audio_url": q.final_audio_url,
-                                                     "expert_audio_url": audio_url, "by": by.name})
+                                                     "expert_audio_url": audio_url, "by": by.name, "channel": q.channel})
     hub.publish("expert", "query_updated", {"id": q.id, "status": q.status})
     hub.publish("admin", "callback", {"query_id": q.id})
 

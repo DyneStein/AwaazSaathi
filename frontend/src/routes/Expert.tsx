@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { diffWords } from 'diff'
-import { ListChecks, CheckCircle2, UserRound, Clock, Video, Mic, Square, Send, Check, PenLine, X, BookPlus, BookCheck, ShieldCheck, ShieldAlert, Upload, LogOut, MapPin, Wheat, Image as ImageIcon, Wallet, TrendingUp, ChevronRight, Bell } from 'lucide-react'
+import { ListChecks, CheckCircle2, UserRound, Clock, Video, Mic, Square, Send, Check, PenLine, X, BookPlus, BookCheck, ShieldCheck, ShieldAlert, Upload, LogOut, MapPin, Wheat, Image as ImageIcon, Wallet, TrendingUp, ChevronRight, Bell, House, BookOpen, Search, BadgeCheck, Hourglass } from 'lucide-react'
 import { api, post, timeAgo, CROP_EN } from '../lib/api'
 import { beep, useRecorder } from '../lib/audio'
 import { useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
-import { AppBar, AppShell, Empty, ErrorNote, LevelBadge, LiveDot, Meter, Mock, Reasons, Spinner, VideoCallView } from '../components/ui'
+import { AppBar, AppShell, Empty, ErrorNote, LevelBadge, LiveDot, Meter, Mock, Reasons, Segmented, Sheet, Spinner, Stat, VideoCallView } from '../components/ui'
+import { sourceLabel } from '../components/Decision'
 
 const PRIO: Record<number, [string, string]> = { 3: ['Outbreak', 'bg-danger-50 text-danger border-danger/20'], 2: ['High priority', 'bg-warn-50 text-warn border-warn/20'], 1: ['Routine', 'bg-field-50 text-muted border-line'], 0: ['Routine', 'bg-field-50 text-muted border-line'] }
 
@@ -15,7 +16,8 @@ export default function Expert() {
   const [profile, setProfile] = useState<any>(null)
   const [open, setOpen] = useState<any[]>([])
   const [answered, setAnswered] = useState<any[]>([])
-  const [tab, setTab] = useState('queue')
+  const [tab, setTab] = useState('home')
+  const [show, setShow] = useState<'open' | 'answered'>('open')
   const [crop, setCrop] = useState('')
   const [sel, setSel] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
@@ -43,7 +45,7 @@ export default function Expert() {
   })
   const video = useVideoCall(ws.send, myTopic)
   const flash = (t: string) => { setToast(t); setTimeout(() => setToast(null), 3200) }
-  const login = (e: any) => { setMe(e); localStorage.setItem('expert', JSON.stringify(e)); setSel(null); setTab('queue') }
+  const login = (e: any) => { setMe(e); localStorage.setItem('expert', JSON.stringify(e)); setSel(null); setTab('home') }
   const logout = () => { setMe(null); localStorage.removeItem('expert'); setProfile(null) }
 
   const all = useMemo(() => [...open, ...answered], [open, answered])
@@ -58,7 +60,7 @@ export default function Expert() {
       <div className="urdu text-[20px] font-bold !leading-[1.8]">مسئلہ ابھی باقی ہے</div>
       <div className="text-xs text-muted">Question #{fu.id}, {CROP_EN[fu.crop] || fu.crop}, {fu.tehsil}. The 3-day follow-up call found the earlier answer did not work.</div>
       <div className="urdu text-[15px] text-ink/80 line-clamp-2 !leading-[1.9]">{fu.transcript}</div>
-      <button onClick={() => { setSel(fu.id); setTab('queue'); setFu(null) }} className="btn btn-danger w-full">Open question</button>
+      <button onClick={() => { setSel(fu.id); setTab('queue'); setShow('open'); setFu(null) }} className="btn btn-danger w-full">Open question</button>
     </div>}
     <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'Farmer'} error={video.error} onDecline={video.decline} onHangup={video.hangup} />
   </>
@@ -69,19 +71,107 @@ export default function Expert() {
     </AppShell>
   )
 
+  const level = profile?.level || me.level
+  const mine = open.filter((q) => (level === 'senior' ? q.can_review || q.can_draft : q.can_draft))
+  const titles: Record<string, string> = { home: `Salaam, ${me.name.replace('Dr. ', '').split(' ')[0]}`, queue: 'Farmer questions', kb: 'Knowledge base', profile: 'My profile' }
   return (
     <AppShell overlay={overlay} active={tab} onTab={setTab}
-      tabs={[{ key: 'queue', label: 'Queue', icon: ListChecks, badge: open.length }, { key: 'answered', label: 'Answered', icon: CheckCircle2 }, { key: 'profile', label: 'Profile', icon: UserRound }]}
-      header={<AppBar logo="/icon-expert.svg" title={tab === 'queue' ? 'Farmer questions' : tab === 'answered' ? 'Answered' : 'My profile'} subtitle={<span className="flex items-center gap-1.5">{me.name} <LevelBadge level={profile?.level || me.level} /></span>} right={<LiveDot on={ws.connected} />} />}>
+      tabs={[{ key: 'home', label: 'Home', icon: House }, { key: 'queue', label: 'Questions', icon: ListChecks, badge: mine.length }, { key: 'kb', label: 'Knowledge', icon: BookOpen }, { key: 'profile', label: 'Profile', icon: UserRound }]}
+      header={<AppBar logo="/icon-expert.svg" title={titles[tab]} subtitle={<span className="flex items-center gap-1.5">{me.name} <LevelBadge level={level} /></span>} right={<LiveDot on={ws.connected} />} />}>
+      {tab === 'home' && <Home me={profile || me} open={open} mine={mine} answered={answered} onOpen={setSel} onSeeAll={() => { setTab('queue'); setShow('open') }} />}
       {tab === 'queue' && <>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-4 pt-3">
-          {[['', 'All crops'], ...Object.entries(CROP_EN)].map(([k, v]) => <button key={k} onClick={() => setCrop(k)} className={`tag py-1.5 px-3 shrink-0 ${crop === k ? 'bg-field-800 text-white' : 'bg-white border border-line'}`}>{v}</button>)}
+        <div className="px-4 pt-3 space-y-2.5">
+          <Segmented value={show} onChange={setShow} options={[['open', `Waiting (${open.length})`], ['answered', `Answered (${answered.length})`]]} />
+          {show === 'open' && <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+            {[['', 'All crops'], ...Object.entries(CROP_EN)].map(([k, v]) => <button key={k} onClick={() => setCrop(k)} aria-pressed={crop === k} className={`tag py-1.5 px-3 shrink-0 ${crop === k ? 'bg-field-800 text-white' : 'bg-white border border-line'}`}>{v}</button>)}
+          </div>}
         </div>
-        <QueueList items={open} loading={loading} onOpen={setSel} empty="The queue is clear" />
+        {show === 'open' ? <QueueList items={open} loading={loading} onOpen={setSel} empty="No questions are waiting" />
+          : <QueueList items={answered} loading={loading} onOpen={setSel} empty="No answers yet" />}
       </>}
-      {tab === 'answered' && <QueueList items={answered} loading={loading} onOpen={setSel} empty="No answers yet" />}
+      {tab === 'kb' && <Knowledge me={profile || me} />}
       {tab === 'profile' && <Profile p={profile} onChange={loadProfile} onLogout={logout} />}
     </AppShell>
+  )
+}
+
+function Home({ me, open, mine, answered, onOpen, onSeeAll }: { me: any; open: any[]; mine: any[]; answered: any[]; onOpen: (id: number) => void; onSeeAll: () => void }) {
+  const dueSoon = open.filter((q) => q.sla_due_at && new Date(q.sla_due_at).getTime() - Date.now() < 3600e3).length
+  const next = mine[0]
+  const senior = me.level === 'senior'
+  return (
+    <div className="p-4 space-y-4">
+      <div className="rounded-2xl bg-field-900 text-white p-4">
+        <div className="text-sm text-field-200">{senior ? 'Waiting for your review or answer' : me.level === 'junior' ? 'Waiting for your draft' : 'Waiting for your answer'}</div>
+        <div className="flex items-end gap-2 mt-1"><span className="text-[44px] leading-none font-extrabold" data-testid="mine-count">{mine.length}</span><span className="pb-1 text-field-200">{mine.length === 1 ? 'question' : 'questions'}</span></div>
+        {next ? <button onClick={() => onOpen(next.id)} className="mt-3 w-full rounded-xl bg-white text-ink text-left p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted"><span className={`tag border ${PRIO[next.priority][1]}`}>{PRIO[next.priority][0]}</span>{next.status === 'drafted' && <span className="tag bg-sky-50 text-sky-800">Draft to review</span>}<span className="ml-auto"><SLA due={next.sla_due_at} status={next.status} /></span></div>
+          <div className="urdu text-[16px] line-clamp-2 !leading-[2] mt-1">{next.transcript}</div>
+          <div className="flex items-center text-sm font-semibold text-field-800 mt-1">Open next question<ChevronRight size={16} className="ml-auto" /></div>
+        </button> : <div className="mt-3 rounded-xl bg-white/10 px-3 py-2.5 text-sm text-field-100">Nothing needs you right now. New questions appear the moment the AI hands one over.</div>}
+      </div>
+      <div className="grid grid-cols-3 gap-2.5">
+        <Stat value={open.length} label="In the whole queue" />
+        <Stat value={dueSoon} label="Due within an hour" tone={dueSoon ? 'warn' : 'plain'} />
+        <Stat value={senior ? me.reviews_done : `${Math.round((me.score || 0) * 100)}%`} label={senior ? 'Reviews done' : 'Quality score'} tone="good" />
+      </div>
+      {!senior && me.progress?.next && <div className="surface p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold"><TrendingUp size={16} className="text-field-700" />On the way to <span className="capitalize">{me.progress.next}</span></div>
+        <div className="mt-2"><Meter label={`Answers reviewed: ${me.progress.reviewed} of ${me.progress.need_reviewed}`} value={me.progress.reviewed / me.progress.need_reviewed} /></div>
+      </div>}
+      <div>
+        <div className="flex items-center justify-between mb-2"><h2 className="font-bold">Recently answered</h2><button onClick={onSeeAll} className="text-sm font-semibold text-field-700">All questions</button></div>
+        {answered.length === 0 ? <div className="surface p-4 text-sm text-muted">Approved answers show up here, with the callback the farmer received.</div>
+          : <ul className="surface divide-y divide-line">{answered.slice(0, 3).map((q) => (
+            <li key={q.id}><button onClick={() => onOpen(q.id)} className="w-full text-left px-4 py-3 flex items-center gap-3">
+              <span className="h-9 w-9 rounded-full bg-field-100 text-field-800 grid place-items-center shrink-0">{q.promoted_kb_id ? <BookCheck size={17} /> : <CheckCircle2 size={17} />}</span>
+              <span className="flex-1 min-w-0"><span className="block urdu text-[15px] truncate !leading-[1.9]">{q.transcript}</span><span className="block text-xs text-muted">{q.answered_by}, {timeAgo(q.created_at)}</span></span>
+              <ChevronRight size={16} className="text-muted" />
+            </button></li>))}</ul>}
+      </div>
+    </div>
+  )
+}
+
+function Knowledge({ me }: { me: any }) {
+  const [items, setItems] = useState<any[] | null>(null)
+  const [q, setQ] = useState('')
+  const [crop, setCrop] = useState('')
+  const [open, setOpen] = useState<any>(null)
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(() => { api(`/api/expert/kb?crop=${crop}&q=${encodeURIComponent(q)}`).then(setItems).catch(() => setItems([])) }, [q, crop])
+  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t) }, [load])
+  const signOff = async () => { setBusy(true); try { await post(`/api/expert/kb/${open.id}/sign-off`, { reviewer_id: me.id }); setOpen({ ...open, needs_expert_review: false, reviewed_by: me.name }); load() } finally { setBusy(false) } }
+  const status = (k: any) => k.source === 'promoted' ? <span className="tag bg-field-100 text-field-800"><BookCheck size={12} /> From an expert answer</span>
+    : k.needs_expert_review ? <span className="tag bg-warn-50 text-warn border border-warn/20"><Hourglass size={12} /> Awaiting sign-off</span>
+      : <span className="tag bg-field-100 text-field-800"><BadgeCheck size={12} /> Signed off</span>
+  return (
+    <div className="p-4 space-y-3">
+      <p className="text-sm text-muted">The only text the AI is allowed to speak. Seniors sign entries off and add new ones from approved answers.</p>
+      <label className="relative block"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search symptoms, in Urdu or Roman" aria-label="Search the knowledge base" className="field !pl-10" /></label>
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+        {[['', 'All crops'], ...Object.entries(CROP_EN)].map(([k, v]) => <button key={k} onClick={() => setCrop(k)} aria-pressed={crop === k} className={`tag py-1.5 px-3 shrink-0 ${crop === k ? 'bg-field-800 text-white' : 'bg-white border border-line'}`}>{v}</button>)}
+      </div>
+      {!items ? <div className="py-10 grid place-items-center text-muted"><Spinner size={22} /></div>
+        : items.length === 0 ? <Empty icon={BookOpen} title="Nothing matches">Try a symptom word, such as the colour of the leaves or the name farmers use.</Empty>
+          : <ul className="space-y-2.5" data-testid="kb-list">{items.map((k) => (
+            <li key={k.id}><button onClick={() => setOpen(k)} className="surface w-full text-left p-3.5 hover:border-field-200">
+              <div className="flex items-center gap-1.5 flex-wrap">{status(k)}{k.senior_only && <span className="tag bg-ink/5 text-ink">Senior only</span>}<span className="ml-auto text-xs text-muted">{CROP_EN[k.crop] || k.crop}</span></div>
+              <div className="font-semibold mt-1.5">{k.title_en}</div>
+              <div className="urdu text-[15px] text-muted !leading-[1.9] truncate">{k.title_ur}</div>
+            </button></li>))}</ul>}
+      {open && <Sheet title={open.title_en} onClose={() => setOpen(null)}>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-1.5">{status(open)}<span className="tag bg-field-50 border border-line text-muted">Entry #{open.id}, {CROP_EN[open.crop] || open.crop}</span></div>
+          <div className="text-sm text-muted">{sourceLabel(open)}</div>
+          <div><div className="text-xs font-semibold text-muted mb-1">What farmers describe</div><div className="urdu text-[15px]">{open.symptoms_ur}</div></div>
+          <div><div className="text-xs font-semibold text-muted mb-1">What the AI says, word for word</div><div className="urdu text-[16px] rounded-xl bg-field-50 border border-line px-3 py-1">{open.answer_ur}</div></div>
+          {open.needs_expert_review && (me.level === 'senior'
+            ? <button disabled={busy} onClick={signOff} className="btn btn-primary w-full">{busy ? <Spinner /> : <BadgeCheck size={18} />} Sign off this entry</button>
+            : <div className="text-sm rounded-xl bg-field-50 border border-line px-3 py-2">A senior agronomist signs entries off. If something here looks wrong, tell a senior.</div>)}
+        </div>
+      </Sheet>}
+    </div>
   )
 }
 
@@ -218,7 +308,7 @@ function Detail({ q, me, onDone, onCall }: { q: any; me: any; onDone: (m: string
         {q.normalized_query && q.normalized_query !== q.transcript && <div className="urdu text-[15px] text-muted">{q.normalized_query}</div>}
         {q.audio_url && <audio src={q.audio_url} controls className="w-full h-10 mt-2" />}
         {q.photo_url && <img src={q.photo_url} className="mt-2 w-full max-h-56 object-cover rounded-xl border border-line" alt="Leaf" />}
-        <button onClick={onCall} className="btn btn-quiet w-full mt-3"><Video size={18} /> Video call farmer (WhatsApp)</button>
+        <button onClick={onCall} className="btn btn-quiet w-full mt-3"><Video size={18} /> Video call the farmer’s smartphone</button>
       </section>
       {q.understanding?.weather?.temp_c !== undefined && <div className="surface px-4 py-3 text-sm text-muted">Weather in {q.tehsil} now: {Math.round(q.understanding.weather.temp_c)}°C, humidity {q.understanding.weather.humidity}%, rain chance {q.understanding.weather.rain_chance ?? 0}%</div>}
       {q.reasons?.includes('followup_still_a_problem') && <section className="rounded-2xl border-2 border-danger/40 bg-danger-50 p-4 space-y-2">
@@ -226,9 +316,10 @@ function Detail({ q, me, onDone, onCall }: { q: any; me: any; onDone: (m: string
         <div className="text-sm text-ink/80">In the 3-day follow-up call the farmer said the problem is still there. Give a new answer; the farmer gets a call back.</div>
         {q.understanding?.previous_answer && <div className="rounded-xl bg-white border border-line p-3"><div className="text-xs text-muted mb-1">Previous answer (did not solve it)</div><div className="urdu text-[15px]">{q.understanding.previous_answer}</div></div>}
       </section>}
-      <Section title="Why the AI did not answer"><Reasons reasons={q.reasons} /><div className="mt-3"><Meter label="Retrieval confidence" value={q.retrieval_score} min={0.3} /></div></Section>
-      <Section title="AI's attempted answer (not sent)">{q.ai_answer ? <div className="urdu text-[16px]">{q.ai_answer}</div> : <div className="text-sm text-muted">No confident answer was found.</div>}
-        {!!q.retrieved?.length && <ul className="mt-2 divide-y divide-line border-t border-line">{q.retrieved.map((r: any) => <li key={r.kb_id} className="flex justify-between items-center py-1.5"><span className="text-xs text-muted">{r.score.toFixed(2)}</span><span className="urdu text-[14px] !leading-[1.9]">{r.title_ur}</span></li>)}</ul>}
+      <Section title="Why the AI did not answer"><Reasons reasons={q.reasons} /><div className="mt-3"><Meter label="Match with the closest knowledge entry" value={q.retrieval_score} min={0.3} /></div>
+        {q.understanding?.evidence?.title_en && <div className="text-xs text-muted mt-2">Closest entry: {q.understanding.evidence.title_en}{q.understanding.evidence.terms?.length ? `. Matching words: ${q.understanding.evidence.terms.length}` : ''}</div>}</Section>
+      <Section title="What the AI would have said (not sent)">{q.ai_answer ? <div className="urdu text-[16px]">{q.ai_answer}</div> : <div className="text-sm text-muted">Nothing in the knowledge base was close enough.</div>}
+        {!!q.retrieved?.length && <ul className="mt-2 divide-y divide-line border-t border-line">{q.retrieved.map((r: any) => <li key={r.kb_id} className="flex justify-between items-center gap-3 py-1.5 text-sm"><span>{r.title_en || <span className="urdu text-[14px] !leading-[1.9]">{r.title_ur}</span>}</span><span className="text-xs text-muted">{r.score.toFixed(2)}</span></li>)}</ul>}
       </Section>
       {full.reviews?.filter((r: any) => r.action === 'reject').map((r: any) => <div key={r.id} className="rounded-xl bg-danger-50 border border-danger/20 p-3 text-sm text-danger">Rejected by {r.reviewer}: {r.reason}</div>)}
 

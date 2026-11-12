@@ -1,61 +1,79 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Phone, PhoneOff, PhoneIncoming, Mic, Square, RotateCcw, UserRoundCheck, Eye, CloudSun, ThumbsUp, Inbox, Camera, ListChecks, Play, Pause, Send, AlertTriangle, ShieldCheck, Bot, UserRound, ImagePlus, Volume2, CheckCircle2 } from 'lucide-react'
-import { api, post, timeAgo, CROP_EN, CROP_UR } from '../lib/api'
+import { Link } from 'react-router-dom'
+import { Captions, Keyboard, Mic, MicOff, Send, SlidersHorizontal } from 'lucide-react'
+import { api, post } from '../lib/api'
 import { beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
 import { useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
-import { AppBar, AppShell, LiveDot, Meter, Mock, Reasons, Spinner, VideoCallView, Empty } from '../components/ui'
+import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../components/ui'
+import { KeypadPhone, type Lcd, type PhoneKey } from '../components/KeypadPhone'
+import { Decision } from '../components/Decision'
+import { Chat, type Lang } from './farmer/Chat'
 
 type Step = 'idle' | 'connecting' | 'welcome' | 'notice' | 'tehsil' | 'tehsil_pick' | 'crop' | 'duration' | 'ask' | 'thinking'
   | 'answer' | 'escalated' | 'more' | 'consent' | 'ended'
 type Prompt = { text: string; audio_url: string | null }
-type Lang = 'ur' | 'pa'
-const UI = {
-  ur: { call: 'کال', inbox: 'جوابات', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان کا ساتھی', sub: 'اپنی فصل کا سوال پوچھیں، اپنی زبان میں', callNow: 'ہیلپ لائن پر کال کریں', connecting: 'کال مل رہی ہے…', fromKb: 'ماہرین کی منظور شدہ معلومات سے جواب', toExpert: 'ماہر کو بھیج دیا گیا', listening: 'سن رہے ہیں', thinking: 'سمجھ رہے ہیں', stopHint: 'بات ختم ہو تو دبائیں', recHint: 'دبائیں اور اپنا سوال بولیں', typeHere: 'یا یہاں لکھیں', incoming: 'آنے والی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ابھی کوئی جواب نہیں', stop: 'روکیں', listen: 'آواز میں سنیں', sendPhoto: 'پتے کی تصویر بھیجیں', pick: 'تصویر لیں یا چنیں', kept: 'ریکارڈنگ محفوظ کر لی گئی', deleted: 'ریکارڈنگ مٹا دی گئی', ai: 'AI جواب', inPhoto: 'تصویر میں:', lang: 'زبان', replay: 'جواب دوبارہ سنیں', rerecord: 'دوبارہ ریکارڈ', cats: { disease: 'بیماری', pest: 'کیڑا', nutrient: 'کھاد / کمی', weed: 'جڑی بوٹی' }, askAbout: 'تصویر کے بارے میں سوال بولیں', analyse: 'تصویر کا تجزیہ کریں', sees: 'AI کو تصویر میں نظر آیا', toExpertBtn: 'ماہر کو بھیجیں', sent: 'ماہر کو بھیج دیا گیا، وہ فون کرے گا', recorded: 'سوال ریکارڈ ہو گیا', followTitle: 'تین دن بعد خیریت کی کال', better: 'بہتر ہے', still: 'مسئلہ باقی ہے', thanks: 'شکریہ! خوشی ہوئی کہ فصل بہتر ہے', expertWill: 'ماہر آپ کو جلد فون کرے گا' },
-  pa: { call: 'کال', inbox: 'جواب', photo: 'تصویر', title: 'آواز ساتھی', hero: 'کسان دا ساتھی', sub: 'اپنی فصل دا سوال پچھو، اپنی بولی وچ', callNow: 'ہیلپ لائن تے کال کرو', connecting: 'کال مل رہی اے…', fromKb: 'ماہراں دی منظور شدہ معلومات توں جواب', toExpert: 'ماہر نوں گھل دتا گیا', listening: 'سن رہے آں', thinking: 'سمجھ رہے آں', stopHint: 'گل مکے تے دباؤ', recHint: 'دباؤ تے اپنا سوال بولو', typeHere: 'یا ایتھے لکھو', incoming: 'آندی کال', expert: 'آواز ساتھی ماہر', noInbox: 'ہلے کوئی جواب نئیں', stop: 'روکو', listen: 'آواز وچ سنو', sendPhoto: 'پتے دی تصویر گھلو', pick: 'تصویر لوو یا چنو', kept: 'ریکارڈنگ محفوظ کر لئی گئی', deleted: 'ریکارڈنگ مٹا دتی گئی', ai: 'AI جواب', inPhoto: 'تصویر وچ:', lang: 'بولی', replay: 'جواب دوبارہ سنو', rerecord: 'دوبارہ ریکارڈ', cats: { disease: 'بیماری', pest: 'کیڑا', nutrient: 'کھاد / کمی', weed: 'جڑی بوٹی' }, askAbout: 'تصویر بارے سوال بولو', analyse: 'تصویر دا جائزہ لوو', sees: 'AI نوں تصویر وچ دسیا', toExpertBtn: 'ماہر نوں گھلو', sent: 'ماہر نوں گھل دتا، اوہ فون کرے گا', recorded: 'سوال ریکارڈ ہو گیا', followTitle: 'تن دناں بعد خیریت دی کال', better: 'بہتر اے', still: 'مسئلہ ہلے وی اے', thanks: 'شکریہ! خوشی ہوئی کہ فصل بہتر اے', expertWill: 'ماہر تہانوں چھیتی فون کرے گا' },
-}
-let L = UI.ur
-const CROP_PA: Record<string, string> = { wheat: 'کنک', cotton: 'کپاہ', rice: 'مونجی', sugarcane: 'کماد', maize: 'مکئی' }
-const cropName = (c: string) => (L === UI.pa ? CROP_PA[c] : CROP_UR[c])
+/** A call the helpline places to the farmer: an expert's answer, the 3-day follow-up, or a saved voice message being played. */
+type Aux = { kind: 'callback' | 'followup' | 'message'; stage: 'ringing' | 'playing' | 'choose' | 'done'; data: any }
+type Line = { id: number; who: 'line' | 'key' | 'farmer'; ur?: string; en?: string }
+type View = 'both' | 'keypad' | 'smart'
 
-// English subtitles for the jury; the farmer hears and sees Urdu.
+const HELPLINE = '0800 29229'
+// English subtitles for the audience; the farmer only hears the Urdu or Punjabi voice.
 const EN: Record<string, string> = {
   welcome: 'Welcome to AwaazSaathi. Press 1 for Punjabi, 2 for Urdu.',
   ai_notice: 'You are speaking to an AI, not a person. If the question is hard, an agronomist will call you back.',
-  tehsil_confirm: 'Is this your tehsil? 1 yes, 2 change.',
+  tehsil_confirm: 'Our record says this is your tehsil. Press 1 if correct, 2 to change.',
   tehsil_pick: 'Press the number of your tehsil.',
   crop: 'Which crop? 1 wheat, 2 cotton, 3 rice, 4 sugarcane, 5 maize.',
   duration: 'Since when? 1 under 3 days, 2 about a week, 3 longer.',
-  ask: 'After the beep, describe the problem.',
-  thinking: 'Understanding your question…',
+  ask: 'After the beep, describe the problem. Press any key when you finish.',
+  thinking: 'Thank you. Understanding your question, please wait.',
   more: '1 new question, 2 end call, 3 hear the answer again, 4 record your question again.',
   consent: 'May we keep this recording to improve the service? 1 keep, 2 delete now.',
+  consent_yes: 'Thank you, your recording is saved. Goodbye.',
+  consent_no: 'Your recording has been deleted. Goodbye.',
 }
+const FOLLOW = {
+  ur: { thanks: 'شکریہ! خوشی ہوئی کہ فصل بہتر ہے۔ اللہ حافظ۔', expert: 'ٹھیک ہے، ہمارا ماہر آپ کو جلد فون کرے گا۔ اللہ حافظ۔' },
+  pa: { thanks: 'شکریہ! خوشی ہوئی کہ فصل بہتر اے۔ اللہ حافظ۔', expert: 'ٹھیک اے، ساڈا ماہر تہانوں چھیتی فون کرے گا۔ اللہ حافظ۔' },
+}
+const IN_CALL_KEYS: Step[] = ['welcome', 'notice', 'tehsil', 'tehsil_pick', 'crop', 'duration', 'ask', 'more', 'consent', 'answer', 'escalated']
+const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export default function Farmer() {
   const [meta, setMeta] = useState<any>(null)
   const [prompts, setPrompts] = useState<Record<string, Prompt>>({})
   const [phone, setPhone] = useState('')
   const [farmerId, setFarmerId] = useState<number | null>(null)
-  const [tab, setTab] = useState('call')
+  const [view, setView] = useState<View>(() => (window.innerWidth >= 1024 ? 'both' : 'keypad'))
   const [step, setStep] = useState<Step>('idle')
   const [call, setCall] = useState<any>(null)
-  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('farmerLang') as Lang) || 'ur')
-  L = UI[lang]
+  const [lang, setLang] = useState<Lang>(() => (localStorage.getItem('farmerLang') as Lang) || 'pa')
   const [crop, setCrop] = useState('')
   const [duration, setDuration] = useState('')
   const [speaking, setSpeaking] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [typed, setTyped] = useState('')
-  const [category, setCategory] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [inbox, setInbox] = useState<any[]>([])
-  const [incoming, setIncoming] = useState<any>(null)
-  const [followup, setFollowup] = useState<any>(null)
-  const [playing, setPlaying] = useState<number | null>(null)
+  const [aux, setAux] = useState<Aux | null>(null)
+  const [menu, setMenu] = useState<number | null>(null)
+  const [keys, setKeys] = useState<string[]>([])
+  const [lines, setLines] = useState<Line[]>([])
   const [offline, setOffline] = useState(false)
+  const [resetKey, setResetKey] = useState(0)
+  const [now, setNow] = useState(Date.now())
+  const [touched, setTouched] = useState(Date.now())
   const rec = useRecorder()
   const stepRef = useRef<Step>('idle'); stepRef.current = step
+  const auxRef = useRef<Aux | null>(null); auxRef.current = aux
+  const recRef = useRef(false); recRef.current = rec.recording
+  const t0 = useRef(0)
+  const lineId = useRef(0)
+  const consentDone = useRef(true)
+  const logEnd = useRef<HTMLDivElement>(null)   // the scrolling captions box
 
   useEffect(() => {
     api('/api/demo/personas').then((m) => { setMeta(m); setPhone(m.personas[24]?.phone || m.personas[0].phone) })
@@ -63,65 +81,123 @@ export default function Farmer() {
   }, [])
   useEffect(() => { api(`/api/prompts?lang=${lang}`).then(setPrompts).catch(() => {}); try { localStorage.setItem('farmerLang', lang) } catch { /* ignore */ } }, [lang])
   useEffect(() => { if (phone) api(`/api/farmer/lookup?phone=${phone}`).then((r) => setFarmerId(r.farmer_id)) }, [phone])
-  const loadInbox = useCallback(() => { if (farmerId) api(`/api/farmer/${farmerId}/inbox`).then(setInbox).catch(() => {}) }, [farmerId])
+  const loadInbox = useCallback(() => { if (farmerId) api(`/api/farmer/${farmerId}/inbox`).then(setInbox).catch(() => {}); else setInbox([]) }, [farmerId])
   useEffect(loadInbox, [loadInbox])
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
+  useEffect(() => { const box = logEnd.current; if (box) box.scrollTop = box.scrollHeight }, [lines.length])   // scroll the captions box only, never the page
+
+  const addLine = useCallback((l: Omit<Line, 'id'>) => setLines((x) => [...x.slice(-40), { ...l, id: ++lineId.current }]), [])
+  const lineFree = () => ['idle', 'ended'].includes(stepRef.current) && !auxRef.current
 
   const myTopic = farmerId ? `farmer:${farmerId}` : ''
   const ws = useWS(myTopic ? [myTopic, 'reset', 'status'] : ['reset', 'status'], (m) => {
     if (m.event.startsWith('rtc_')) { video.onSignal(m.event, m.data); return }
-    if (m.event === 'callback') { loadInbox(); if (['idle', 'ended'].includes(stepRef.current)) { setIncoming(m.data); beep(660, 400, 3) } }
-    if (m.event === 'inbox') { loadInbox(); beep(520, 250, 2) }
-    if (m.event === 'followup') { loadInbox(); if (['idle', 'ended'].includes(stepRef.current)) { setFollowup({ ...m.data, stage: 'ringing' }); beep(660, 400, 3) } }
-    if (m.event === 'reset') loadInbox()
+    if (m.event === 'callback') {
+      loadInbox()
+      if (m.data.channel && m.data.channel !== 'voice') beep(520, 200, 2)              // asked from the smartphone: answer arrives in the chat
+      else if (lineFree()) { setMenu(null); setAux({ kind: 'callback', stage: 'ringing', data: m.data }) }
+    }
+    if (m.event === 'inbox') { loadInbox(); beep(520, 250, 2); setTouched(Date.now()) }
+    if (m.event === 'followup') { loadInbox(); if (lineFree()) { setMenu(null); setAux({ kind: 'followup', stage: 'ringing', data: m.data }) } }
+    if (m.event === 'reset') { loadInbox(); setResetKey((k) => k + 1); setResult(null); setLines([]); setAux(null) }
     if (m.event === 'offline') setOffline(m.data.on)
   })
   const video = useVideoCall(ws.send, myTopic)
 
-  const say = useCallback(async (key: string, after?: () => void) => {
-    const p = prompts[key]; setSpeaking(true)
-    await speak(p?.audio_url, p?.text || ''); setSpeaking(false); after?.()
-  }, [prompts])
+  // The phone keeps ringing until it is answered or rejected.
+  useEffect(() => {
+    if (aux?.stage !== 'ringing') return
+    beep(740, 380, 2); try { navigator.vibrate?.([300, 150, 300]) } catch { /* ignore */ }
+    const t = setInterval(() => beep(740, 380, 2), 2400)
+    return () => clearInterval(t)
+  }, [aux?.stage, aux?.data])
+
+  const say = useCallback(async (key: string, after?: () => void, override?: Prompt) => {
+    const p = override || prompts[key]
+    addLine({ who: 'line', ur: p?.text, en: EN[key] })
+    setSpeaking(true); await speak(p?.audio_url, p?.text || ''); setSpeaking(false); after?.()
+  }, [prompts, addLine])
   const go = (s: Step) => { setStep(s); setNote(null) }
 
+  const startListening = async () => {
+    beep(1000, 220); await wait(280)                     // wait so the beep is not part of the recording
+    if (stepRef.current !== 'ask' || recRef.current) return
+    if (!(await rec.start())) setNote('The microphone is not available here. Use a sample question or type one below.')
+  }
+
   useEffect(() => {
-    const k: Partial<Record<Step, string>> = { welcome: 'welcome', tehsil: 'tehsil_confirm', tehsil_pick: 'tehsil_pick', crop: 'crop', duration: 'duration', more: 'more', consent: 'consent' }
+    const k: Partial<Record<Step, string>> = { welcome: 'welcome', tehsil_pick: 'tehsil_pick', crop: 'crop', duration: 'duration', more: 'more', consent: 'consent' }
     if (step === 'notice') say('ai_notice', () => stepRef.current === 'notice' && go(call?.known ? 'tehsil' : 'tehsil_pick'))
-    else if (step === 'ask') say('ask', () => beep(1000, 220))
+    else if (step === 'tehsil') {
+      const p: Prompt = call?.tehsil_confirm || prompts.tehsil_confirm
+      if (p && !p.audio_url) api(`/api/tts?text=${encodeURIComponent(p.text)}`).then((r) => { if (stepRef.current === 'tehsil') say('tehsil_confirm', undefined, { ...p, audio_url: r.audio_url }) }).catch(() => say('tehsil_confirm', undefined, p))
+      else say('tehsil_confirm', undefined, p)
+    }
+    else if (step === 'ask') say('ask', () => { if (stepRef.current === 'ask') startListening() })
     else if (k[step]) say(k[step]!)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
+  // A recording never runs longer than 40 seconds.
+  const finishRecording = useRef<() => void>(() => {})
+  useEffect(() => { if (!rec.recording) return; const t = setTimeout(() => finishRecording.current(), 40000); return () => clearTimeout(t) }, [rec.recording])
+
   const startCall = async () => {
-    unlockAudio(); setResult(null); setCrop(''); setDuration(''); setTyped(''); setTab('call')
+    unlockAudio(); stopAudio(); setResult(null); setCrop(''); setDuration(''); setTyped(''); setKeys([]); setLines([]); setMenu(null)
     go('connecting'); beep(440, 600, 2)
-    try { const c = await post('/api/call/start', { phone, language: lang }); setCall(c); setFarmerId(c.farmer_id); setTimeout(() => go('welcome'), 900) }
-    catch (e: any) { setNote(e.message); go('idle') }
+    // Ask for the microphone now, so the browser's permission box does not interrupt the question later.
+    navigator.mediaDevices?.getUserMedia?.({ audio: true }).then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {})
+    try {
+      const c = await post('/api/call/start', { phone, language: lang })
+      setCall(c); setFarmerId(c.farmer_id); consentDone.current = false
+      setTimeout(() => { if (stepRef.current === 'connecting') { t0.current = Date.now(); go('welcome') } }, 900)
+    } catch (e: any) { setNote(`The call could not connect (${e.message}).`); go('idle') }
   }
-  const endCall = () => { stopAudio(); go('idle'); setCall(null) }
+  const endCall = () => {
+    stopAudio(); setSpeaking(false)
+    if (rec.recording) rec.stop()
+    // Hanging up before the consent question means no consent: the recording is deleted.
+    if (call && !consentDone.current) { consentDone.current = true; post(`/api/call/${call.call_id}/consent`, { keep: false }).catch(() => {}) }
+    go('ended'); setCall(null)
+  }
 
   const deliver = async (r: any) => {
-    setResult(r); go(r.escalated ? 'escalated' : 'answer'); setSpeaking(true)
-    await speak(r.answer_audio, r.answer_text); setSpeaking(false)
+    setResult(r); go(r.escalated ? 'escalated' : 'answer')
+    addLine({ who: 'farmer', ur: r.query.transcript, en: 'What the helpline heard' })
+    const src = r.query.understanding?.evidence
+    addLine({ who: 'line', ur: r.answer_text, en: r.escalated ? 'Not answered by the AI. Sent to an agronomist, who will call back.' : `Reviewed answer${src?.title_en ? `: ${src.title_en}` : ''}, read word for word${(r.query.understanding?.answer_parts?.length || 0) > 1 ? ', plus advice from today’s weather' : ''}.` })
+    setSpeaking(true); await speak(r.answer_audio, r.answer_text); setSpeaking(false)
     if (['answer', 'escalated'].includes(stepRef.current)) go('more')
   }
   const submit = async (opts: { audio?: Blob; transcript?: string }) => {
+    if (!call) return
+    if (recRef.current) await rec.stop()
     stopAudio(); go('thinking'); say('thinking')
-    const fd = new FormData(); fd.append('crop', crop); fd.append('duration', duration); fd.append('category', category)
+    const fd = new FormData(); fd.append('crop', crop); fd.append('duration', duration)
     if (opts.transcript) fd.append('transcript', opts.transcript)
     if (opts.audio) fd.append('audio', opts.audio, 'question.webm')
     try {
       const r = await api(`/api/call/${call.call_id}/ask`, { method: 'POST', body: fd })
-      if (r.needs_text) { go('ask'); setNote(r.stt_engine === 'offline' ? 'Offline mode: speech recognition is paused. Type the question or pick a sample.' : 'The recording could not be transcribed. Type it or pick a sample.'); return }
-      deliver(r)
-    } catch (e: any) { go('ask'); setNote(`Could not reach the server (${e.message}). Try again.`) }
+      if (stepRef.current !== 'thinking') return
+      if (r.needs_text) { go('ask'); setNote(r.stt_engine === 'offline' ? 'Offline mode: speech recognition is paused. Use a sample question or type one.' : 'The recording could not be understood. Speak again after the beep, or use a sample question.'); return }
+      setTyped(''); deliver(r)
+    } catch (e: any) { if (stepRef.current === 'thinking') { go('ask'); setNote(`The server did not answer (${e.message}). Try again.`) } }
   }
+  finishRecording.current = async () => { const b = await rec.stop(); if (b && b.size > 1000) submit({ audio: b }); else setNote('That recording was too short. Press any key and speak again.') }
 
   const press = async (d: string) => {
-    if (['idle', 'ended', 'connecting', 'thinking'].includes(step)) return
-    beep(1200 + Number(d) * 40, 70); stopAudio(); setSpeaking(false)
+    if (!IN_CALL_KEYS.includes(step) || !call) return
+    beep(d === '*' ? 1180 : d === '#' ? 1560 : 1200 + Number(d) * 40, 70); stopAudio(); setSpeaking(false)
+    setKeys((k) => [...k.slice(-7), d]); addLine({ who: 'key', en: d })
+    if (step === 'ask') { if (rec.recording) finishRecording.current(); else startListening(); return }
     if (step === 'answer' || step === 'escalated') { go('more'); return }
-    if (step === 'welcome' && (d === '1' || d === '2')) { const l: Lang = d === '1' ? 'pa' : 'ur'; const p = await api(`/api/prompts?lang=${l}`); setPrompts(p); setLang(l); post(`/api/call/${call.call_id}/language`, { language: l }); go('notice') }
-    else if (step === 'notice') go(call?.known ? 'tehsil' : 'tehsil_pick')
+    if (step === 'welcome' && (d === '1' || d === '2')) {
+      const l: Lang = d === '1' ? 'pa' : 'ur'
+      const p = await api(`/api/prompts?lang=${l}`); setPrompts(p); setLang(l)
+      const c = await post(`/api/call/${call.call_id}/language`, { language: l }); if (c.tehsil_confirm) setCall({ ...call, tehsil_confirm: c.tehsil_confirm })
+      go('notice')
+    }
+    else if (step === 'notice') go(call.known ? 'tehsil' : 'tehsil_pick')
     else if (step === 'tehsil') { if (d === '1') go('crop'); else if (d === '2') go('tehsil_pick') }
     else if (step === 'tehsil_pick') {
       const t = meta?.tehsils?.[Number(d === '0' ? 10 : d) - 1]
@@ -130,324 +206,187 @@ export default function Farmer() {
     else if (step === 'crop' && meta?.crops[d]) { setCrop(meta.crops[d]); go('duration') }
     else if (step === 'duration' && meta?.durations[d]) { setDuration(meta.durations[d]); go('ask') }
     else if (step === 'more') {
-      if (d === '1') { setResult(null); setCategory(''); go('ask') }
+      if (d === '1' || d === '4') { setResult(null); go('ask') }
       else if (d === '2') go('consent')
-      else if (d === '3' && result) { setSpeaking(true); await speak(result.answer_audio, result.answer_text); setSpeaking(false); say('more') }
-      else if (d === '4') { setResult(null); go('ask') }
+      else if (d === '3' && result) { setSpeaking(true); await speak(result.answer_audio, result.answer_text); setSpeaking(false); if (stepRef.current === 'more') say('more') }
     }
     else if (step === 'consent' && (d === '1' || d === '2')) {
       const keep = d === '1'
+      consentDone.current = true
       await post(`/api/call/${call.call_id}/consent`, { keep })
-      const p = prompts[keep ? 'consent_yes' : 'consent_no']; setSpeaking(true)
-      await speak(p?.audio_url, p?.text || ''); setSpeaking(false)
-      setStep('ended'); setNote(keep ? L.kept : L.deleted)
+      await say(keep ? 'consent_yes' : 'consent_no')
+      if (stepRef.current === 'consent') { setCall(null); go('ended') }
     }
   }
+
+  const markHeard = (it: any) => post(`/api/inbox/${it.id}/heard`).then(loadInbox).catch(() => {})
+  const finishAux = (ms = 1600) => { setAux((a) => a && { ...a, stage: 'done' }); setTimeout(() => setAux((a) => (a?.stage === 'done' ? null : a)), ms) }
+  const acceptAux = async () => {
+    const a = auxRef.current; if (!a) return
+    unlockAudio(); t0.current = Date.now(); setLines([]); setAux({ ...a, stage: 'playing' })
+    const d = a.data
+    if (a.kind === 'callback') {
+      addLine({ who: 'line', ur: d.text, en: `The agronomist’s answer, approved by ${d.by}.` })
+      await speak(d.audio_url, d.text)
+      if (d.expert_audio_url) await speak(d.expert_audio_url, '')
+      const item = inbox.find((i) => i.query_id === d.query_id && i.kind === 'callback'); if (item) markHeard(item)
+      finishAux()
+    } else {
+      addLine({ who: 'line', ur: d.text, en: 'Three days later: did the advice work? 1 it is better, 2 the problem is still there.' })
+      await speak(d.audio_url, d.text)
+      setAux((x) => x && { ...x, stage: 'choose' })
+    }
+  }
+  const followReply = async (better: boolean) => {
+    const a = auxRef.current; if (!a) return
+    addLine({ who: 'key', en: better ? '1' : '2' })
+    if (!better) await post(`/api/query/${a.data.query_id}/to-expert?source=followup`).catch(() => {})
+    const text = FOLLOW[lang][better ? 'thanks' : 'expert']
+    addLine({ who: 'line', ur: text, en: better ? 'Glad the crop is better. Goodbye.' : 'An agronomist will call you soon. Goodbye.' })
+    const item = inbox.find((i) => i.query_id === a.data.query_id && i.kind === 'followup'); if (item) markHeard(item)
+    finishAux(2600)
+  }
+  const playMessage = async (it: any) => {
+    unlockAudio(); t0.current = Date.now(); setMenu(null); setLines([]); setAux({ kind: 'message', stage: 'playing', data: it })
+    addLine({ who: 'line', ur: it.text_ur, en: it.kind === 'outbreak_alert' ? 'Outbreak alert for the farmer’s tehsil.' : it.kind === 'followup' ? 'Follow-up call (saved message).' : 'The agronomist’s answer (saved message).' })
+    await speak(it.audio_url, it.text_ur)
+    if (!it.heard) markHeard(it)
+    finishAux(800)
+  }
+
+  const onKey = (k: PhoneKey) => {
+    setTouched(Date.now())
+    if (aux) {
+      if (aux.stage === 'ringing') { if (['call', 'softL', 'ok'].includes(k)) acceptAux(); else if (k === 'end' || k === 'softR') setAux(null); return }
+      if (k === 'end' || k === 'softR') { stopAudio(); setAux(null); return }
+      if (aux.stage === 'choose' && (k === '1' || k === '2')) { beep(1240, 70); followReply(k === '1') }
+      return
+    }
+    if (menu !== null) {
+      if (k === 'up') setMenu(Math.max(0, menu - 1))
+      else if (k === 'down') setMenu(Math.min(Math.max(0, inbox.length - 1), menu + 1))
+      else if (['ok', 'softL', 'call'].includes(k) && inbox[menu]) playMessage(inbox[menu])
+      else if (k === 'softR' || k === 'end') setMenu(null)
+      return
+    }
+    if (step === 'idle' || step === 'ended') {
+      if (['call', 'softR', 'ok'].includes(k)) startCall()
+      else if (k === 'softL') { unlockAudio(); setMenu(0) }
+      return
+    }
+    if (k === 'end' || k === 'softR') { endCall(); return }
+    if (/^[0-9*#]$/.test(k)) press(k)
+  }
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (/^[0-9]$/.test(e.key) && !(e.target instanceof HTMLInputElement)) press(e.key) }
+    const h = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (el.closest('input, textarea, select, [contenteditable]')) return
+      if (/^[0-9*#]$/.test(e.key)) onKey(e.key as PhoneKey)
+      else if (e.key === 'Enter' && !el.closest('button, a')) onKey('call')
+      else if (e.key === 'Escape') onKey('end')
+    }
     window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
   })
-  const toggleRec = async () => {
-    if (rec.recording) { const b = await rec.stop(); if (b && b.size > 1000) submit({ audio: b }); else setNote('Recording too short. Speak a little longer.') }
-    else { stopAudio(); await rec.start() }
-  }
-  const playItem = async (it: any) => {
-    if (playing === it.id) { stopAudio(); setPlaying(null); return }
-    setPlaying(it.id); await speak(it.audio_url, it.text_ur); setPlaying(null)
-    if (!it.heard) post(`/api/inbox/${it.id}/heard`).then(loadInbox)
-  }
-  const acceptIncoming = async () => {
-    const d = incoming; setIncoming(null); setTab('inbox')
-    const item = inbox.find((i) => i.query_id === d.query_id)
-    setPlaying(item?.id ?? -1); await speak(d.audio_url, d.text)
-    if (d.expert_audio_url) await speak(d.expert_audio_url, '')
-    setPlaying(null); if (item) post(`/api/inbox/${item.id}/heard`).then(loadInbox)
-  }
 
   const unheard = inbox.filter((i) => !i.heard).length
   const inCall = !['idle', 'ended'].includes(step)
-  const tabs = [
-    { key: 'call', label: <span className="urdu !leading-none text-[13px]">{L.call}</span>, icon: Phone },
-    { key: 'inbox', label: <span className="urdu !leading-none text-[13px]">{L.inbox}</span>, icon: Inbox, badge: unheard },
-    { key: 'photo', label: <span className="urdu !leading-none text-[13px]">{L.photo}</span>, icon: Camera },
-    { key: 'ai', label: <span className="text-[12px]">AI</span>, icon: ListChecks },
-  ]
+  const secs = Math.max(0, Math.floor((now - t0.current) / 1000))
+  const MSG: Record<string, string> = { callback: 'Expert answer', outbreak_alert: 'Outbreak alert', followup: 'Follow-up call' }
+  const lcd: Lcd = (() => {
+    if (aux) {
+      if (aux.stage === 'ringing') return { title: 'Incoming call', icon: 'ring', lines: [{ text: 'AwaazSaathi', big: true, blink: true }, { text: HELPLINE }], softL: 'Answer', softR: 'Reject' }
+      if (aux.stage === 'done') return { title: 'Call ended', lines: [{ text: 'AwaazSaathi', big: true }, { text: mmss(secs) }] }
+      return { title: aux.kind === 'message' ? 'Voice message' : 'In call', icon: aux.stage === 'choose' ? null : 'speaker', lines: [{ text: 'AwaazSaathi', big: true }, { text: mmss(secs) }, { text: aux.stage === 'choose' ? 'Press 1 or 2' : '', blink: true }], softR: 'End' }
+    }
+    if (menu !== null) {
+      if (!inbox.length) return { title: 'Voice inbox', lines: [{ text: 'No messages' }], softR: 'Back' }
+      const from = Math.min(Math.max(0, menu - 1), Math.max(0, inbox.length - 3))
+      return { title: `Voice inbox ${menu + 1}/${inbox.length}`, lines: inbox.slice(from, from + 3).map((it, i) => ({ text: `${it.heard ? ' ' : '*'} ${MSG[it.kind] || 'Message'}`, invert: from + i === menu })), softL: 'Play', softR: 'Back' }
+    }
+    if (step === 'idle' || step === 'ended') return {
+      title: unheard ? 'New voice message' : step === 'ended' ? 'Call ended' : 'Helpline', icon: unheard ? 'voicemail' : null,
+      lines: [{ text: HELPLINE, big: true }, { text: unheard ? `${unheard} not heard yet` : 'Press the call key' }], softL: 'Inbox', softR: 'Call', lit: now - touched < 15000,
+    }
+    if (step === 'connecting') return { title: 'Calling', lines: [{ text: HELPLINE, big: true }, { text: 'Connecting...', blink: true }], softR: 'End' }
+    return {
+      title: 'In call', icon: rec.recording ? 'rec' : speaking ? 'speaker' : null,
+      lines: [{ text: 'AwaazSaathi', big: true }, { text: mmss(secs) }, { text: rec.recording ? 'Listening...' : step === 'thinking' ? 'Please wait...' : keys.length ? `> ${keys.join(' ')}` : '' }], softR: 'End',
+    }
+  })()
 
+  const askOpen = step === 'ask' && !!call
+  const showKeypad = view !== 'smart', showSmart = view !== 'keypad'
   return (
-    <AppShell dir="rtl" tabs={inCall ? undefined : tabs} active={tab} onTab={setTab}
-      header={<AppBar title={<span className="urdu !leading-tight text-[20px]">{L.title}</span>} subtitle={<span dir="ltr">Farmer helpline{offline ? ', offline mode' : ''}</span>} right={<>
-        {!inCall && <div dir="rtl" role="group" aria-label="Language" className="flex rounded-lg border border-line bg-field-50 p-0.5">
-          {(['ur', 'pa'] as Lang[]).map((l) => <button key={l} onClick={() => setLang(l)} className={`urdu !leading-none px-2.5 py-1.5 rounded-md text-[13px] ${lang === l ? 'bg-white shadow-sm text-field-800 font-bold' : 'text-muted'}`}>{l === 'ur' ? 'اردو' : 'پنجابی'}</button>)}
-        </div>}
-        <LiveDot on={ws.connected} /></>} />}
-      aside={<Pipeline result={result} step={step} />}
-      overlay={<>
-        {incoming && <IncomingCallback by={incoming.by} onAccept={acceptIncoming} onDecline={() => setIncoming(null)} />}
-        {followup && <FollowupCall f={followup} setF={setFollowup} />}
-        <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
-      </>}>
-      {tab === 'call' && (inCall ? (
-        <InCall step={step} prompts={prompts} call={call} lang={lang} crop={crop} meta={meta} result={result} speaking={speaking} rec={rec}
-          note={note} typed={typed} setTyped={setTyped} category={category} setCategory={setCategory} onPress={press} onRec={toggleRec} onSubmit={submit} onEnd={endCall} />
-      ) : (
-        <div className="flex flex-col items-center px-6 pt-10 pb-8 gap-6 text-center">
-          <img src="/icon.svg" className="h-20 w-20 rounded-[22px] shadow-lg" alt="" />
-          <div>
-            <div className="urdu text-[28px] font-bold !text-center !leading-[1.9]">{L.hero}</div>
-            <div className="urdu text-lg text-muted !text-center !leading-[2]">{L.sub}</div>
-          </div>
-          {step === 'ended' && note && <div className="w-full rounded-xl bg-field-100 text-field-900 px-4 py-2 urdu !text-center !leading-[2] flex items-center justify-center gap-2"><CheckCircle2 size={18} /> {note}</div>}
-          <button onClick={startCall} aria-label="Call the helpline" className="h-24 w-24 rounded-full bg-field-700 hover:bg-field-800 text-white grid place-items-center shadow-xl ring-pulse"><Phone size={38} /></button>
-          <div className="urdu text-lg !text-center !leading-[1.8]">{L.callNow}</div>
-          <label className="w-full text-start" dir="ltr">
-            <span className="text-xs text-muted">Demo caller ID (stored only as a hash)</span>
-            <select value={phone} onChange={(e) => setPhone(e.target.value)} className="field mt-1 text-sm">
-              {meta?.personas.map((p: any) => <option key={p.phone} value={p.phone}>{p.phone}, {p.tehsil}</option>)}
-            </select>
-          </label>
-          <div dir="ltr" className="text-[11px] text-muted flex items-center gap-2"><Mock>Telco simulated</Mock> Works on any button phone in production</div>
-        </div>
-      ))}
-      {tab === 'inbox' && <InboxList items={inbox} playing={playing} onPlay={playItem} />}
-      {tab === 'photo' && <PhotoDoor meta={meta} phone={phone} lang={lang} onResult={(r) => { setResult(r); speak(r.answer_audio, r.answer_text) }} />}
-      {tab === 'ai' && <div dir="ltr" className="p-4"><Pipeline result={result} step={step} /></div>}
-    </AppShell>
-  )
-}
-
-function InCall({ step, prompts, call, lang, crop, meta, result, speaking, rec, note, typed, setTyped, category, setCategory, onPress, onRec, onSubmit, onEnd }: any) {
-  const pk: Record<string, string> = { welcome: 'welcome', notice: 'ai_notice', tehsil: 'tehsil_confirm', tehsil_pick: 'tehsil_pick', crop: 'crop', duration: 'duration', ask: 'ask', thinking: 'thinking', more: 'more', consent: 'consent' }
-  const key = pk[step]
-  return (
-    <div className="min-h-full flex flex-col bg-white text-ink px-5 pt-4 pb-5">
-      <div className="flex justify-center gap-1.5 flex-wrap">
-        <span className="tag bg-field-50 text-field-800 border border-line"><Bot size={13} /> AI</span>
-        {!['welcome', 'connecting'].includes(step) && <span className="tag bg-field-50 text-field-800 border border-line urdu !leading-normal">{lang === 'pa' ? 'پنجابی' : 'اردو'}</span>}
-        {call?.tehsil_ur && !['welcome', 'connecting', 'notice'].includes(step) && <span className="tag bg-field-50 text-field-800 border border-line urdu !leading-normal">{call.tehsil_ur}</span>}
-        {crop && <span className="tag bg-field-50 text-field-800 border border-line urdu !leading-normal">{cropName(crop)}</span>}
-      </div>
-
-      <div key={step} className="mt-4 rounded-2xl bg-field-50 border border-line p-4 min-h-[180px]">
-        {step === 'connecting' && <div className="flex flex-col items-center gap-3 py-8"><div className="h-16 w-16 rounded-full bg-field-700 text-white grid place-items-center ring-pulse"><Phone size={28} /></div><div className="urdu text-muted !text-center">{L.connecting}</div></div>}
-        {key && <>
-          <div className="urdu text-[22px] !leading-[2.3]">{prompts[key]?.text}</div>
-          {EN[key] && <div dir="ltr" className="text-[12px] text-muted mt-2 text-left">{EN[key]}</div>}
-        </>}
-        {step === 'tehsil' && <div className="mt-3 text-center"><span className="urdu text-[30px] font-bold text-field-700">{call?.tehsil_ur}</span></div>}
-        {step === 'tehsil_pick' && <div className="grid grid-cols-2 gap-1.5 mt-3">{meta?.tehsils.slice(0, 10).map((t: any, i: number) => <div key={t.name} className="rounded-lg bg-white border border-line px-2 py-1 flex items-center gap-2"><b className="text-field-700">{(i + 1) % 10}</b><span className="urdu !leading-normal">{t.ur}</span></div>)}</div>}
-        {(step === 'answer' || step === 'escalated') && result && <>
-          <div className={`tag mb-2 ${step === 'answer' ? 'bg-field-700 text-white' : 'bg-ink text-white'}`}>
-            {step === 'answer' ? <><ShieldCheck size={13} /> <span className="urdu !leading-normal">{L.fromKb}</span></> : <><UserRound size={13} /> <span className="urdu !leading-normal">{L.toExpert}</span></>}
-          </div>
-          <div className="urdu text-[21px] !leading-[2.25]">{result.answer_text}</div>
-        </>}
-      </div>
-
-      <div className="h-9 mt-3 flex items-center justify-center">
-        {rec.recording ? <span className="tag bg-danger text-white py-1"><span className="eq"><span /><span /><span /><span /></span> <span className="urdu !leading-normal">{L.listening}</span></span>
-          : step === 'thinking' ? <span className="tag bg-field-100 text-field-800 py-1"><Spinner size={14} /> <span className="urdu !leading-normal">{L.thinking}</span></span>
-          : speaking ? <span className="tag bg-field-50 text-field-800 border border-line py-1"><Volume2 size={14} /> <span className="eq text-field-600"><span /><span /><span /><span /></span></span> : null}
-      </div>
-
-      {step === 'ask' ? (
-        <div className="flex flex-col items-center gap-3">
-          <Categories value={category} onChange={setCategory} />
-          <button onClick={onRec} aria-label={rec.recording ? 'Stop and send' : 'Record question'} className={`h-24 w-24 rounded-full grid place-items-center shadow-xl ${rec.recording ? 'bg-danger ring-pulse' : 'bg-field-700 text-white hover:bg-field-800'}`}>{rec.recording ? <Square size={32} fill="currentColor" /> : <Mic size={40} />}</button>
-          <div className="urdu text-muted !text-center !leading-[1.8]">{rec.recording ? L.stopHint : L.recHint}</div>
-          {(rec.error || note) && <div dir="ltr" className="text-xs rounded-lg bg-warn-50 text-warn px-3 py-2 w-full flex gap-2"><AlertTriangle size={14} className="shrink-0 mt-0.5" />{rec.error || note}</div>}
-          <div className="w-full flex gap-2">
-            <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={L.typeHere} className="flex-1 rounded-xl bg-white border border-line px-3 py-2 urdu !leading-normal placeholder:text-muted/70" />
-            <button disabled={!typed.trim()} onClick={() => onSubmit({ transcript: typed })} aria-label="Send" className="btn btn-primary !px-3"><Send size={18} className="-scale-x-100" /></button>
-          </div>
-          <div dir="ltr" className="w-full">
-            <div className="text-[11px] text-muted mb-1">Sample questions (offline-safe)</div>
-            <div className="flex flex-wrap gap-1.5">
-              {meta && Object.entries(meta.canned).map(([k, c]: any) => <button key={k} onClick={() => onSubmit({ transcript: c.transcript })} className="tag bg-white border border-line hover:border-field-600 text-ink py-1">{c.label.split('(')[0].replace(':', '')}</button>)}
+    <div className="min-h-[100dvh] bg-canvas">
+      <header className="bg-white border-b border-line">
+        <div className="mx-auto max-w-[1480px] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Link to="/" aria-label="Home" className="flex items-center gap-2.5"><Logo size={34} /><span><span className="block font-bold leading-tight">The farmer’s side</span><span className="block text-[12.5px] text-muted leading-tight">Two ways to reach the helpline{offline ? ', offline mode' : ''}</span></span></Link>
+          <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto min-w-0">
+            <Segmented value={view} onChange={setView} className="flex-1 min-w-0 sm:flex-none sm:w-[340px]" options={[['keypad', 'Button phone'], ['smart', 'Smartphone'], ...(window.innerWidth >= 1024 ? [['both', 'Both'] as [View, string]] : [])]} />
+            <div role="group" aria-label="Farmer’s language" className={`flex rounded-xl bg-field-100/70 p-1 ${inCall ? 'opacity-50 pointer-events-none' : ''}`}>
+              {(['pa', 'ur'] as Lang[]).map((l) => <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l} className={`urdu !leading-none px-3 py-1.5 rounded-lg text-[13px] ${lang === l ? 'bg-white shadow-sm text-field-900 font-bold' : 'text-muted'}`}>{l === 'ur' ? 'اردو' : 'پنجابی'}</button>)}
             </div>
+            <LiveDot on={ws.connected} />
           </div>
         </div>
-      ) : <>
-        {step === 'more' && result && <div className="flex gap-2 mt-1"><button onClick={() => onPress('3')} className="btn btn-quiet flex-1 !py-2 text-sm"><RotateCcw size={16} /> <span className="urdu !leading-normal">{L.replay}</span></button><button onClick={() => onPress('4')} className="btn btn-quiet flex-1 !py-2 text-sm"><Mic size={16} /> <span className="urdu !leading-normal">{L.rerecord}</span></button></div>}
-        <Keypad onPress={onPress} active={['welcome', 'notice', 'tehsil', 'tehsil_pick', 'crop', 'duration', 'more', 'consent', 'answer', 'escalated'].includes(step)} />
-      </>}
-      <button onClick={onEnd} aria-label="End call" className="mt-auto pt-4 mx-auto"><span className="h-14 w-14 rounded-full bg-danger text-white grid place-items-center"><PhoneOff size={24} /></span></button>
-    </div>
-  )
-}
+      </header>
 
-function Keypad({ onPress, active }: { onPress: (d: string) => void; active: boolean }) {
-  return (
-    <div dir="ltr" className={`grid grid-cols-3 gap-3 mt-2 px-3 ${active ? '' : 'opacity-35 pointer-events-none'}`}>
-      {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((k) => (
-        <button key={k} onClick={() => onPress(k)} className="h-14 rounded-2xl bg-field-50 border border-line hover:bg-field-100 active:bg-field-700 active:text-white text-2xl font-semibold text-ink">{k}</button>))}
-    </div>
-  )
-}
-
-function IncomingCallback({ by, onAccept, onDecline }: { by: string; onAccept: () => void; onDecline: () => void }) {
-  return (
-    <div className="absolute inset-0 z-30 bg-white text-ink flex flex-col items-center justify-center gap-6 px-6 text-center drop-in">
-      <div className="urdu text-muted !text-center">{L.incoming}</div>
-      <div className="h-24 w-24 rounded-full bg-field-700 text-white grid place-items-center ring-pulse"><PhoneIncoming size={40} /></div>
-      <div><div className="urdu text-[26px] font-bold !text-center !leading-[1.9]">{L.expert}</div><div dir="ltr" className="text-muted text-sm">Answer approved by {by}</div></div>
-      <div className="flex gap-14">
-        <button onClick={onDecline} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger text-white grid place-items-center"><PhoneOff /></button>
-        <button onClick={onAccept} aria-label="Accept" className="h-16 w-16 rounded-full bg-field-700 text-white grid place-items-center"><Phone /></button>
-      </div>
-    </div>
-  )
-}
-
-function FollowupCall({ f, setF }: { f: any; setF: (v: any) => void }) {
-  const accept = async () => { setF({ ...f, stage: 'talking' }); await speak(f.audio_url, f.text); setF((x: any) => x && { ...x, stage: 'answer' }) }
-  const reply = async (better: boolean) => {
-    if (!better) await post(`/api/query/${f.query_id}/to-expert?source=followup`)
-    setF({ ...f, stage: better ? 'thanks' : 'expert' }); setTimeout(() => setF(null), 2500)
-  }
-  return (
-    <div className="absolute inset-0 z-30 bg-white text-ink flex flex-col items-center justify-center gap-6 px-6 text-center drop-in">
-      <div className="urdu text-muted !text-center">{L.followTitle}</div>
-      <div className={`h-24 w-24 rounded-full bg-field-700 text-white grid place-items-center ${f.stage === 'ringing' ? 'ring-pulse' : ''}`}>{f.stage === 'thanks' ? <ThumbsUp size={38} /> : <RotateCcw size={38} />}</div>
-      <div className="urdu text-[22px] font-bold !text-center !leading-[1.9]">{L.expert}</div>
-      {f.stage === 'ringing' && <div className="flex gap-14">
-        <button onClick={() => setF(null)} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger text-white grid place-items-center"><PhoneOff /></button>
-        <button onClick={accept} aria-label="Accept" className="h-16 w-16 rounded-full bg-field-700 text-white grid place-items-center"><Phone /></button></div>}
-      {f.stage === 'talking' && <div className="urdu text-[17px] !text-center">{f.text}</div>}
-      {f.stage === 'answer' && <div className="w-full space-y-2">
-        <button onClick={() => reply(true)} className="btn btn-primary w-full"><b>1</b> <span className="urdu !leading-normal">{L.better}</span></button>
-        <button onClick={() => reply(false)} className="btn btn-quiet w-full"><b>2</b> <span className="urdu !leading-normal">{L.still}</span></button></div>}
-      {f.stage === 'thanks' && <div className="urdu text-lg !text-center">{L.thanks}</div>}
-      {f.stage === 'expert' && <div className="urdu text-lg !text-center">{L.expertWill}</div>}
-    </div>
-  )
-}
-
-function InboxList({ items, playing, onPlay }: { items: any[]; playing: number | null; onPlay: (it: any) => void }) {
-  if (!items.length) return <Empty icon={Inbox} title={L.noInbox}><span dir="ltr">Expert answers and outbreak alerts arrive here as voice messages.</span></Empty>
-  return (
-    <ul className="p-4 space-y-3">
-      {items.map((it) => {
-        const alert = it.kind === 'outbreak_alert'
-        const follow = it.kind === 'followup'
-        return (
-          <li key={it.id} className={`surface p-4 ${alert ? 'border-danger/30' : ''}`}>
-            <div className="flex items-center gap-2">
-              <span className={`h-9 w-9 rounded-xl grid place-items-center ${alert ? 'bg-danger-50 text-danger' : 'bg-field-100 text-field-800'}`}>{alert ? <AlertTriangle size={18} /> : follow ? <RotateCcw size={18} /> : <UserRound size={18} />}</span>
-              <div className="flex-1"><div className="urdu font-bold !leading-[1.8]">{it.title_ur}</div><div dir="ltr" className="text-[11px] text-muted text-right">{timeAgo(it.created_at)}</div></div>
-              {!it.heard && <span className="h-2.5 w-2.5 rounded-full bg-mustard" />}
+      <div className="mx-auto max-w-[1480px] px-4 py-5 flex flex-wrap justify-center items-start gap-x-9 gap-y-7">
+        {showKeypad && <section aria-label="Button phone" className="flex flex-col items-center gap-3">
+          <div className="text-center"><h2 className="font-bold">Button phone</h2><p className="text-[13px] text-muted">A normal voice call. No app, no internet, no reading.</p></div>
+          <KeypadPhone lcd={lcd} onKey={onKey} ringing={aux?.stage === 'ringing'} clock={new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} />
+          <p className="text-[12px] text-muted flex items-center gap-1.5"><Keyboard size={13} /> Number keys, Enter to call, Esc to hang up</p>
+          <section className="surface p-4 w-[340px] max-w-full text-left" aria-label="Presenter tools" dir="ltr">
+            <h2 className="font-bold flex items-center gap-2"><SlidersHorizontal size={17} className="text-field-700" /> Presenter tools</h2>
+            <label className="block mt-3"><span className="text-xs text-muted">Who is calling (stored only as a hash, with the tehsil)</span>
+              <select value={phone} onChange={(e) => setPhone(e.target.value)} disabled={inCall || !!aux} className="field mt-1 text-sm">
+                {meta?.personas.map((p: any) => <option key={p.phone} value={p.phone}>{p.phone}, {p.tehsil}</option>)}
+              </select></label>
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              {rec.recording ? <><span className="h-7 w-7 rounded-full bg-danger text-white grid place-items-center"><Mic size={15} /></span><span className="font-semibold text-danger">Listening. Press any phone key to finish.</span></>
+                : rec.error ? <><span className="h-7 w-7 rounded-full bg-warn-50 text-warn grid place-items-center"><MicOff size={15} /></span><span className="text-warn">{rec.error}</span></>
+                  : <><span className="h-7 w-7 rounded-full bg-field-50 border border-line text-field-700 grid place-items-center"><Mic size={15} /></span><span className="text-muted">The laptop microphone stands in for the phone’s.</span></>}
             </div>
-            <div className="urdu text-[17px] mt-2 text-ink/90">{it.text_ur}</div>
-            <button onClick={() => onPlay(it)} className="btn btn-quiet w-full mt-2">{playing === it.id ? <><Pause size={18} /> <span className="urdu !leading-normal">{L.stop}</span></> : <><Play size={18} /> <span className="urdu !leading-normal">{L.listen}</span></>}</button>
-          </li>)
-      })}
-      <li dir="ltr" className="text-[11px] text-muted text-center flex items-center justify-center gap-2"><Mock>SMS / WhatsApp backup simulated</Mock></li>
-    </ul>
-  )
-}
+            {note && <div role="alert" className="mt-3 text-sm rounded-xl bg-warn-50 text-warn border border-warn/20 px-3 py-2">{note}</div>}
+            <div className="mt-3 text-xs text-muted">{askOpen ? 'Send a sample question instead of speaking' : 'Sample questions unlock when the helpline asks for the problem'}</div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {meta && Object.entries(meta.canned).slice(0, 3).map(([k, c]: any) => <button key={k} disabled={!askOpen} onClick={() => submit({ transcript: c.transcript })} data-testid={`sample-${k}`} className="btn btn-quiet !py-1.5 !px-3 text-[13px]">{c.label.split(':')[0]}</button>)}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <input value={typed} onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && askOpen && typed.trim() && submit({ transcript: typed })} disabled={!askOpen} dir="rtl" placeholder="سوال یہاں لکھیں" aria-label="Type the farmer’s question" className="field urdu !leading-normal !py-1.5 disabled:bg-field-50" />
+              <button disabled={!askOpen || !typed.trim()} onClick={() => submit({ transcript: typed })} aria-label="Send typed question" className="btn btn-primary !px-3"><Send size={17} /></button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5"><Mock>Phone network simulated</Mock><Mock>Chat delivery simulated</Mock></div>
+          </section>
+        </section>}
 
-function Categories({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="w-full flex gap-1.5 overflow-x-auto no-scrollbar">
-      {Object.entries(L.cats).map(([k, v]) => <button key={k} onClick={() => onChange(value === k ? '' : k)} className={`tag shrink-0 py-1 px-2.5 urdu !leading-normal text-[13px] ${value === k ? 'bg-field-800 text-white' : 'bg-white border border-line text-ink'}`}>{v}</button>)}
-    </div>
-  )
-}
+        {showSmart && <section aria-label="Smartphone" className="flex flex-col items-center gap-3 max-w-full">
+          <div className="text-center"><h2 className="font-bold">Smartphone</h2><p className="text-[13px] text-muted">Send a crop photo or a voice note. Take a video call from the agronomist.</p></div>
+          <DeviceFrame fill={false} statusTone="dark" label="Smartphone">
+            <Chat meta={meta} phone={phone} lang={lang} inbox={inbox} resetKey={resetKey} onResult={setResult} onHeard={markHeard} />
+            <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
+          </DeviceFrame>
+        </section>}
 
-function PhotoDoor({ meta, phone, lang, onResult }: { meta: any; phone: string; lang: string; onResult: (r: any) => void }) {
-  const [crop, setCrop] = useState('wheat')
-  const [category, setCategory] = useState('disease')
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
-  const [voice, setVoice] = useState<Blob | null>(null)
-  const [text, setText] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [res, setRes] = useState<any>(null)
-  const [sent, setSent] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const rec = useRecorder()
-  const ref = useRef<HTMLInputElement>(null)
-  const pick = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); setRes(null); setSent(false); setErr(null) }
-  const toggleRec = async () => { if (rec.recording) setVoice(await rec.stop()); else { setVoice(null); await rec.start() } }
-  const analyse = async () => {
-    if (!file) return
-    setBusy(true); setErr(null); setRes(null); setSent(false)
-    try {
-      const c = await post('/api/call/start', { phone, language: lang })
-      const fd = new FormData(); fd.append('crop', crop); fd.append('category', category); fd.append('image', file); fd.append('transcript', text)
-      if (voice) fd.append('audio', voice, 'question.webm')
-      const r = await api(`/api/call/${c.call_id}/photo`, { method: 'POST', body: fd })
-      if (r.needs_text) setErr(r.message); else { setRes(r); setSent(r.escalated); onResult(r) }
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }
-  const toExpert = async () => { await post(`/api/query/${res.query.id}/to-expert`); setSent(true) }
-  return (
-    <div className="p-4 space-y-3">
-      <div className="surface p-4 space-y-3">
-        <div className="flex items-center gap-2"><span className="h-9 w-9 rounded-xl bg-field-50 text-field-700 border border-line grid place-items-center"><Camera size={18} /></span>
-          <div><div className="urdu font-bold !leading-[1.8]">{L.sendPhoto}</div><div dir="ltr" className="text-[11px] text-muted text-right">WhatsApp door, analysed on-device</div></div></div>
-        <Categories value={category} onChange={setCategory} />
-        <div className="flex flex-wrap gap-1.5">{meta && Object.values(meta.crops).map((c: any) => <button key={c} onClick={() => setCrop(c)} className={`tag py-1.5 px-3 urdu !leading-normal text-[14px] ${crop === c ? 'bg-field-800 text-white' : 'bg-field-50 border border-line'}`}>{cropName(c)}</button>)}</div>
-        {preview ? <button onClick={() => ref.current?.click()} className="block w-full"><img src={preview} alt="Leaf" className="w-full max-h-52 object-cover rounded-xl border border-line" /></button>
-          : <button onClick={() => ref.current?.click()} className="btn btn-quiet w-full !py-6 flex-col"><ImagePlus size={26} /><span className="urdu !leading-normal">{L.pick}</span></button>}
-        <input ref={ref} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
-        <div className="flex items-center gap-2">
-          <button onClick={toggleRec} className={`btn shrink-0 ${rec.recording ? 'btn-danger' : 'btn-quiet'}`}>{rec.recording ? <Square size={15} fill="currentColor" /> : <Mic size={17} />}</button>
-          <span className="urdu text-[14px] !leading-normal text-muted flex-1">{rec.recording ? L.listening : voice ? L.recorded : L.askAbout}</span>
-          {voice && <button onClick={() => speak(URL.createObjectURL(voice), '')} aria-label="Play recording" className="btn btn-quiet !px-2.5"><Play size={16} /></button>}
-        </div>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L.typeHere} className="field urdu !leading-normal" />
-        <button disabled={busy || !file || rec.recording} onClick={analyse} className="btn btn-primary w-full">{busy ? <Spinner /> : <Eye size={18} />} <span className="urdu !leading-normal">{L.analyse}</span></button>
-        {busy && <div dir="ltr" className="text-xs text-muted text-center">Analysing the photo on this device, about 10 to 20 seconds</div>}
+        <aside className="w-full max-w-[440px] space-y-4" dir="ltr">
+          <section className="surface p-5" aria-label="On the line">
+            <h2 className="font-bold text-lg flex items-center gap-2"><Captions size={19} className="text-field-700" /> On the line</h2>
+            <p className="text-sm text-muted">Captions for the audience. The farmer only hears this.</p>
+            <div ref={logEnd} className="mt-3 max-h-[330px] overflow-y-auto no-scrollbar space-y-2" data-testid="captions" aria-live="polite">
+              {!lines.length && <p className="text-sm text-muted rounded-xl border border-dashed border-line px-3 py-4">Press the green call key on the button phone. Everything the helpline says shows up here.</p>}
+              {lines.map((l) => l.who === 'key'
+                ? <div key={l.id} className="flex justify-end"><span className="tag bg-ink text-white">Farmer pressed {l.en}</span></div>
+                : <div key={l.id} className={`rounded-xl border px-3 py-2 ${l.who === 'farmer' ? 'border-field-200 bg-field-50 ml-8' : 'border-line mr-8'}`}>
+                  <div className="text-[11px] font-semibold text-muted">{l.who === 'farmer' ? 'Farmer' : 'Helpline'}</div>
+                  {l.ur && <div className="urdu text-[16px] !leading-[2.1] pb-1.5">{l.ur}</div>}
+                  {l.en && <div className="text-[12.5px] text-muted border-t border-line/70 pt-1.5">{l.en}</div>}
+                </div>)}
+            </div>
+          </section>
+
+          <Decision result={result} started={inCall} />
+        </aside>
       </div>
-      {err && <div dir="ltr" className="text-sm rounded-xl bg-warn-50 text-warn px-3 py-2">{err}</div>}
-      {res && <div className="surface p-4 space-y-3">
-        {res.vision?.description_ur && <div><div className="text-xs text-muted urdu !leading-normal">{L.sees}</div><div className="urdu text-[16px]">{res.vision.description_ur}</div></div>}
-        {!res.escalated && <div className="border-t border-line pt-3"><div className="tag bg-field-100 text-field-800 mb-1"><ShieldCheck size={13} /> <span className="urdu !leading-normal">{L.fromKb}</span></div><div className="urdu text-[17px]">{res.answer_text}</div></div>}
-        <div className="flex gap-2">
-          <button onClick={() => speak(res.answer_audio, res.answer_text)} className="btn btn-quiet flex-1"><Volume2 size={17} /> <span className="urdu !leading-normal">{L.listen}</span></button>
-          {sent ? <span className="tag bg-ink/5 text-ink flex-1 justify-center urdu !leading-normal"><UserRoundCheck size={14} /> {L.sent}</span>
-            : <button onClick={toExpert} className="btn btn-primary flex-1"><UserRound size={17} /> <span className="urdu !leading-normal">{L.toExpertBtn}</span></button>}
-        </div>
-      </div>}
-    </div>
-  )
-}
-
-function Pipeline({ result, step }: { result: any; step: Step }) {
-  const q = result?.query
-  const stages = [
-    ['Voice gateway', 'Keypad triage', step !== 'idle'],
-    ['Speech to text', result?.stt_engine || 'Groq Whisper', !!q],
-    ['Understand', 'Crop, symptoms, risk', !!q],
-    ['Retrieve', q ? `Score ${q.retrieval_score.toFixed(2)}` : 'Reviewed knowledge', !!q],
-    ['Safety rules', q ? (q.reasons.length ? 'Escalate' : 'Safe to answer') : 'Explicit checks', !!q],
-    [q?.status === 'answered_ai' ? 'Answer by voice' : 'Expert queue', q ? (q.status === 'answered_ai' ? 'Spoken now' : q.route === 'senior_only' ? 'Senior only' : 'Junior, then senior') : 'Or human expert', !!q],
-  ] as const
-  return (
-    <div className="surface p-5" dir="ltr">
-      <div className="font-bold text-lg">How the AI decided</div>
-      <div className="text-sm text-muted mb-4">Every answer passes explicit safety rules before it is spoken.</div>
-      <ol className="grid grid-cols-2 gap-2 mb-5">
-        {stages.map(([k, d, on], i) => {
-          const warn = i === 4 && q?.reasons?.length
-          return <li key={k} className={`rounded-xl px-3 py-2 border text-sm ${on ? (warn ? 'border-warn/30 bg-warn-50' : 'border-field-200 bg-field-50') : 'border-line text-muted'}`}>
-            <div className="font-semibold flex items-center gap-1.5"><span className={`h-5 w-5 rounded-full text-[11px] grid place-items-center ${on ? 'bg-field-800 text-white' : 'bg-line'}`}>{i + 1}</span>{k}</div>
-            <div className="text-xs opacity-80 truncate mt-0.5">{d}</div>
-          </li>
-        })}
-      </ol>
-      {!q ? <div className="text-sm text-muted">Ask a question in the call to see the transcript, sources and confidence checks.</div> : (
-        <div className="space-y-4">
-          <div><div className="text-xs text-muted mb-1">Transcript</div><div className="urdu text-lg bg-field-50 border border-line rounded-xl px-3 py-1">{q.transcript}</div></div>
-          <Meter label="Retrieval confidence" value={q.retrieval_score} min={0.3} />
-          <Meter label="Grounding in sources" value={q.grounding} min={0.6} />
-          <div><div className="text-xs text-muted mb-1.5">Safety checks</div><Reasons reasons={q.reasons} /></div>
-          <div><div className="text-xs text-muted mb-1">Sources retrieved</div>
-            <ul className="divide-y divide-line">{q.retrieved.map((r: any) => <li key={r.kb_id} className="flex items-center justify-between gap-3 py-1.5"><span className="text-xs text-muted">{r.score.toFixed(2)}</span><span className="urdu !leading-[1.9] text-[15px]">{r.title_ur}</span></li>)}</ul>
-          </div>
-          {q.understanding?.weather?.temp_c !== undefined && <div className="rounded-xl border border-line bg-field-50 px-3 py-2 text-sm flex items-center gap-2"><CloudSun size={16} className="text-field-700" /> Weather in {q.tehsil}: {Math.round(q.understanding.weather.temp_c)}°C, humidity {q.understanding.weather.humidity}%, rain chance {q.understanding.weather.rain_chance ?? 0}%. Added to the spoken advice.</div>}
-          <div className="text-xs text-muted">Crop: {CROP_EN[q.crop] || '—'}. Tehsil: {q.tehsil}.</div>
-        </div>)}
     </div>
   )
 }

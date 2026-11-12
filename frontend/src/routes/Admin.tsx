@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { RotateCcw, AlertTriangle, FastForward, PhoneForwarded, WifiOff, Wifi, Play, Phone, Stethoscope, Store, Activity, ShieldCheck, Cpu, KeyRound } from 'lucide-react'
+import { RotateCcw, AlertTriangle, FastForward, PhoneForwarded, WifiOff, Wifi, Play, Phone, Stethoscope, Store, Activity, ShieldCheck, Cpu, KeyRound, FlaskConical, ChevronDown } from 'lucide-react'
 import { api, post, timeAgo } from '../lib/api'
 import { useWS } from '../lib/ws'
-import { LevelBadge, LiveDot, Logo, Spinner } from '../components/ui'
+import { LevelBadge, LiveDot, Logo, Spinner, REASON } from '../components/ui'
 
 export default function Admin() {
   const [h, setH] = useState<any>(null)
@@ -61,6 +61,8 @@ export default function Admin() {
             </div>
           </section>
 
+          <Evaluation />
+
           <section className="surface p-4">
             <div className="font-bold flex items-center gap-2 mb-2"><Activity size={17} /> Live activity</div>
             <ul className="text-sm divide-y divide-line max-h-[420px] overflow-auto">{events.map((e) => (
@@ -73,7 +75,7 @@ export default function Admin() {
           <section className="surface p-4">
             <div className="font-bold mb-2">Open the apps</div>
             <div className="grid gap-2">
-              {[['/farmer', 'Farmer helpline', Phone], ['/expert', 'Agronomist app', Stethoscope], ['/dealer', 'Dealer app', Store]].map(([to, t, I]: any) => <Link key={to} to={to} target="_blank" className="btn btn-quiet justify-start"><I size={17} />{t}</Link>)}
+              {[['/farmer', 'Farmer phones', Phone], ['/expert', 'Agronomist app', Stethoscope], ['/dealer', 'Dealer app', Store]].map(([to, t, I]: any) => <Link key={to} to={to} target="_blank" className="btn btn-quiet justify-start"><I size={17} />{t}</Link>)}
             </div>
             <div className="text-xs text-muted mt-2">Phone: open http://&lt;laptop IP&gt;:8000/dealer. The start script prints the address and a QR code.</div>
           </section>
@@ -112,5 +114,47 @@ function Thresholds({ t, onSaved }: { t: any; onSaved: () => void }) {
       <label className="flex items-center gap-2">Grounding<input type="range" min={0} max={1} step={0.01} value={g} onChange={(e) => setG(+e.target.value)} className="flex-1 accent-field-700" /><span className="w-10 text-right">{g.toFixed(2)}</span></label>
       <button onClick={() => post('/api/admin/thresholds', { retrieval_min: r, grounding_min: g }).then(onSaved)} className="btn btn-quiet text-xs">Apply</button>
     </div>
+  )
+}
+
+const VERDICT: Record<string, [string, string]> = {
+  correct: ['Correct', 'bg-field-100 text-field-800'], over_escalated: ['Sent to a human, could have answered', 'bg-warn-50 text-warn'],
+  unsafe_answer: ['Unsafe: answered, should not have', 'bg-danger text-white'], wrong_source: ['Unsafe: wrong source', 'bg-danger text-white'],
+}
+
+/** Runs the labelled question set through the live safety rules and shows the result, including every miss. */
+function Evaluation() {
+  const [r, setR] = useState<any>(null)
+  const [busy, setBusy] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const run = async () => { setBusy(true); setErr(null); try { setR(await api('/api/admin/evaluation')) } catch (e: any) { setErr(`The evaluation did not run (${e.message}).`) } finally { setBusy(false) } }
+  const misses = r?.rows.filter((x: any) => x.verdict !== 'correct') || []
+  return (
+    <section className="surface p-4" data-testid="evaluation">
+      <div className="flex items-start gap-3">
+        <div className="flex-1"><div className="font-bold flex items-center gap-2"><FlaskConical size={17} /> Safety evaluation</div>
+          <div className="text-sm text-muted">Labelled farmer questions in Urdu, Punjabi and Roman Urdu, run through the same rules as a live call. Half must be answered, half must go to a human.</div></div>
+        <button onClick={run} disabled={busy} className="btn btn-primary text-sm shrink-0">{busy ? <Spinner /> : <FlaskConical size={16} />}{r ? 'Run again' : 'Run evaluation'}</button>
+      </div>
+      {err && <div className="mt-3 text-sm rounded-xl bg-danger-50 text-danger px-3 py-2">{err}</div>}
+      {r && <>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+          <div className={`rounded-xl border p-3 ${r.unsafe ? 'border-danger/40 bg-danger-50' : 'border-field-200 bg-field-50'}`}><div className={`text-3xl font-extrabold ${r.unsafe ? 'text-danger' : 'text-field-800'}`} data-testid="eval-unsafe">{r.unsafe}</div><div className="text-xs text-muted mt-1">Unsafe answers</div></div>
+          <div className="rounded-xl border border-line p-3"><div className="text-3xl font-extrabold">{r.correct}<span className="text-base font-semibold text-muted"> / {r.total}</span></div><div className="text-xs text-muted mt-1">Decided correctly</div></div>
+          <div className="rounded-xl border border-line p-3"><div className="text-3xl font-extrabold">{r.answered_correctly}<span className="text-base font-semibold text-muted"> / {r.answer_cases}</span></div><div className="text-xs text-muted mt-1">Answerable questions answered</div></div>
+          <div className="rounded-xl border border-line p-3"><div className="text-3xl font-extrabold">{r.over_escalated}</div><div className="text-xs text-muted mt-1">Sent to a human unnecessarily</div></div>
+        </div>
+        <p className="text-xs text-muted mt-2">Rules only, no language model, against {r.kb_entries} knowledge entries. The set is small and written by the team; it is a regression check, not a field trial.</p>
+        {misses.length > 0 && <ul className="mt-3 space-y-1.5">{misses.map((x: any) => <li key={x.id} className="rounded-xl border border-line px-3 py-2 text-sm"><span className={`tag ${VERDICT[x.verdict][1]}`}>{VERDICT[x.verdict][0]}</span><div className="urdu text-[15px] !leading-[1.9] mt-1">{x.text}</div><div className="text-xs text-muted">{x.reasons.map((y: string) => REASON[y.split(':')[0]] || y).join(', ') || `answered from ${x.tag}`}</div></li>)}</ul>}
+        <button onClick={() => setOpen(!open)} aria-expanded={open} className="mt-3 text-sm font-semibold text-field-700 flex items-center gap-1">{open ? 'Hide' : 'Show'} all {r.total} questions<ChevronDown size={15} className={open ? 'rotate-180' : ''} /></button>
+        {open && <div className="mt-2 max-h-[420px] overflow-auto rounded-xl border border-line"><table className="w-full text-sm">
+          <thead className="bg-field-50 text-xs text-muted sticky top-0"><tr><th className="text-left font-semibold px-3 py-2">Question</th><th className="text-left font-semibold px-3 py-2">Should</th><th className="text-left font-semibold px-3 py-2">Did</th></tr></thead>
+          <tbody className="divide-y divide-line">{r.rows.map((x: any) => <tr key={x.id} className={x.verdict === 'correct' ? '' : 'bg-warn-50'}>
+            <td className="px-3 py-1.5 urdu text-[14px] !leading-[1.9]">{x.text}</td>
+            <td className="px-3 py-1.5 text-xs whitespace-nowrap">{x.expect === 'answer' ? 'Answer' : `Human: ${x.why}`}</td>
+            <td className="px-3 py-1.5 text-xs">{x.answered ? `Answered (${x.score.toFixed(2)})` : (x.reasons.map((y: string) => REASON[y.split(':')[0]] || y).join(', '))}</td></tr>)}</tbody></table></div>}
+      </>}
+    </section>
   )
 }
