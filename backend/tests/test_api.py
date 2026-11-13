@@ -498,6 +498,9 @@ def test_internet_link_parsers_and_order():
     assert "4018" in ng.error_from('{"lvl":"eror","err":"ERR_NGROK_4018 authentication failed"}')
     assert lhr.url_from("tunneled with tls termination, https://1a2b3c.lhr.life") == "https://1a2b3c.lhr.life"
     assert lhr.url_from("manage your account at https://admin.localhost.run/") is None      # its sign-in page, not a link
+    real = "b9ee5b69cd6710.app.lhr.life tunneled with tls termination, https://b9ee5b69cd6710.app.lhr.life"   # copied from tunnel.log
+    assert lhr.url_from(real) == "https://b9ee5b69cd6710.app.lhr.life"
+    assert lhr.url_from("To set up and manage custom domains go to https://admin.localhost.run/") is None
     assert [p.name for p in tunnel.providers()] == ["ngrok", "cloudflare", "localhostrun"]
     assert ng.available() is False or config.NGROK_AUTHTOKEN     # ngrok needs the token, never used silently
 

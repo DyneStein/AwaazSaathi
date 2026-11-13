@@ -24,7 +24,7 @@ from . import config
 CF_RE = re.compile(r"https://(?!api\.)[a-z0-9]+(?:-[a-z0-9]+)+\.trycloudflare\.com")   # api.trycloudflare.com = error text
 NGROK_RE = re.compile(r"https://[a-z0-9.-]+\.ngrok(?:-free)?\.(?:app|dev|io)")
 # localhost.run gives <id>.lhr.life; its own pages (admin.localhost.run, sign-in) appear in the banner and are not links.
-LHR_RE = re.compile(r"https://[a-z0-9-]+\.lhr\.life")
+LHR_RE = re.compile(r"https://[a-z0-9-]+(?:\.[a-z0-9-]+)*\.lhr\.life")   # e.g. https://b9ee5b69cd6710.app.lhr.life
 RETRY_EVERY_S = 10     # pause between rounds when no tool managed a link
 VERIFY_S = 30      # how long a new link may take to start answering before it is rejected
 
