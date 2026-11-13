@@ -11,6 +11,7 @@ import Dealer from './routes/Dealer'
 import Expert from './routes/Expert'
 import Admin from './routes/Admin'
 import Connect from './routes/Connect'
+import { SoundGate } from './components/ui'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/admin" element={<Admin />} />
         <Route path="/connect" element={<Connect />} />
       </Routes>
+      <SoundGate />
     </BrowserRouter>
   </StrictMode>,
 )

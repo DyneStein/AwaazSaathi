@@ -482,3 +482,19 @@ def test_internet_link_status_and_lan_info(client, monkeypatch):
     assert client.get("/api/lan").json()["public"] == "https://example.trycloudflare.com"
     client.post("/api/tunnel/stop")
     assert client.get("/api/lan").json()["public"] is None
+
+
+def test_spoken_crop_beats_a_keypad_slip(client):
+    # Pressed 2 (cotton) but said "meri kanak..." (wheat): the farmer's words decide the crop.
+    q = ask(client, start(client)["call_id"], "میری کنک دے پتیاں تے پیلیاں دھاریاں نیں تے ہتھ لاؤ تے پیلا پوڈر لگدا اے", crop="cotton")["query"]
+    assert q["crop"] == "wheat" and q["understanding"]["crop_from_speech"] == {"keyed": "cotton", "spoken": "wheat"}
+    from app.pipeline.router import spoken_crop
+    assert spoken_crop("kapas par safed makhi") == "cotton" and spoken_crop("گندم اور کپاس دونوں") is None and spoken_crop("پتے پیلے ہیں") is None
+
+
+def test_speech_cleanup_rules():
+    from app.pipeline import stt
+    assert stt.dedupe("تیلا لگ گیا ہے پتے چپے ہیں پتے چپے ہیں پتے چپے ہیں") == "تیلا لگ گیا ہے پتے چپے ہیں"
+    assert stt.dedupe("چھوٹے چھوٹے سبز کیڑے") == "چھوٹے چھوٹے سبز کیڑے"        # doubled words are real Urdu
+    assert stt.garbled("Mary, kanakðu pate píleni?") and not stt.garbled("meri kanak de pattay") and not stt.garbled("میری کنک")
+    assert set(stt.PROMPT) == {"pa", "ur"}

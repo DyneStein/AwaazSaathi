@@ -120,7 +120,7 @@ def ask(call_id: int, crop: str = Form(""), duration: str = Form(""), transcript
         (config.UPLOAD_DIR / name).write_bytes(data)
         audio_url = f"/uploads/{name}"
         if not transcript:
-            text, engine = stt.transcribe(data, name, audio.content_type or "audio/webm", crop)
+            text, engine = stt.transcribe(data, name, audio.content_type or "audio/webm", crop, c.language)
             if not text:
                 return {"needs_text": True, "stt_engine": engine, "audio_url": audio_url}
             transcript = text
@@ -150,7 +150,7 @@ def photo(call_id: int, crop: str = Form(""), duration: str = Form(""), category
         aname = f"call{call_id}_{uuid.uuid4().hex[:8]}.webm"
         (config.UPLOAD_DIR / aname).write_bytes(adata)
         audio_url = f"/uploads/{aname}"
-        said, engine = stt.transcribe(adata, aname, audio.content_type or "audio/webm", crop)
+        said, engine = stt.transcribe(adata, aname, audio.content_type or "audio/webm", crop, c.language)
         transcript = (transcript + " " + (said or "")).strip()
     v = llm.analyze_photo(data, mime, trust_router.known_tags(db))
     desc = (v or {}).get("description_ur") or "، ".join((v or {}).get("symptoms_ur") or [])

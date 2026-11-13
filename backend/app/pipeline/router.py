@@ -82,9 +82,31 @@ def assess(*, transcript: str, crop: str, tags: list[str], und: dict | None = No
     return Assessment(hits, top, top_score, answer, grounding, tag, d, evidence, normalized)
 
 
+# Crop names as farmers say them (Urdu, Punjabi, Roman). Used only when the words name one crop clearly.
+CROP_WORDS = {
+    "wheat": ["گندم", "کنک", "gandum", "kanak"],
+    "cotton": ["کپاس", "کپاہ", "نرما", "kapas", "kapah", "narma"],
+    "rice": ["مونجی", "چاول", "دھان", "munji", "chawal", "dhan"],
+    "sugarcane": ["کماد", "گنا", "گنے", "kamad", "ganna", "gannay"],
+    "maize": ["مکئی", "مکی", "makai", "makki"],
+}
+
+
+def spoken_crop(text: str) -> str | None:
+    """The one crop the farmer names, or None if none or several are named."""
+    import re
+    words = set(re.findall(r"\w+", text.lower()))
+    named = [c for c, ws in CROP_WORDS.items() if any(w in words for w in ws)]
+    return named[0] if len(named) == 1 else None
+
+
 def process(db, *, farmer: Farmer, call_id: int | None, crop: str, duration: str, transcript: str,
             channel: str = "voice", photo_url: str | None = None, audio_url: str | None = None,
             vision: dict | None = None, category: str | None = None) -> Query:
+    # A keypad slip ("2" for cotton) must not override what the farmer actually said ("meri kanak...").
+    keyed, said = crop, spoken_crop(transcript)
+    if said and said != crop:
+        crop = said
     tags = known_tags(db)
     und = llm.understand(transcript + (f" (category: {category})" if category else ""), crop, duration, tags) or {}
     a = assess(transcript=transcript, crop=crop, tags=tags, und=und, vision=vision, category=category,
@@ -101,6 +123,8 @@ def process(db, *, farmer: Farmer, call_id: int | None, crop: str, duration: str
 
     w = outbreak.weather(farmer.tehsil)
     q.understanding = {**(q.understanding or {}), "weather": w, "evidence": a.evidence}
+    if said and keyed and said != keyed:
+        q.understanding["crop_from_speech"] = {"keyed": keyed, "spoken": said}
     emergency = any(r.startswith("health_emergency") for r in d.reasons)
     if not d.escalate:
         q.status, q.answered_by, q.answered_at = "answered_ai", "AI", now()

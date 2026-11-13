@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, Loader2, Mic, MicOff, PhoneOff, Video, AlertTriangle, CheckCircle2, Signal, Wifi, BatteryMedium, X } from 'lucide-react'
+import { ChevronLeft, Loader2, Mic, MicOff, PhoneOff, Video, AlertTriangle, CheckCircle2, Signal, Wifi, BatteryMedium, X, Volume2 } from 'lucide-react'
+import { onAudioBlocked, unlockAudio } from '../lib/audio'
 import type { LucideIcon } from 'lucide-react'
 import type { CallState } from '../lib/rtc'
 
@@ -212,4 +213,15 @@ function MuteButton({ stream }: { stream: MediaStream | null }) {
   return <button aria-label="Mute" onClick={(e) => { if (t) { t.enabled = !t.enabled; (e.currentTarget as HTMLButtonElement).dataset.m = String(!t.enabled) } }} className="h-16 w-16 rounded-full bg-white/15 grid place-items-center group">
     <Mic className="group-data-[m=true]:hidden" /><MicOff className="hidden group-data-[m=true]:block" />
   </button>
+}
+
+/** Appears only when a phone browser blocked sound: one tap plays the waiting clip (the call does not move on without it). */
+export function SoundGate() {
+  const [blocked, setBlocked] = useState(false)
+  useEffect(() => onAudioBlocked(setBlocked), [])
+  if (!blocked) return null
+  return (
+    <button onClick={unlockAudio} data-testid="sound-gate" className="fixed left-1/2 -translate-x-1/2 bottom-[max(1.5rem,env(safe-area-inset-bottom))] z-[70] btn btn-primary !rounded-full !px-6 !py-3.5 shadow-[0_12px_30px_-10px_rgba(8,46,32,.7)] ring-pulse">
+      <Volume2 size={20} />Tap to hear the helpline
+    </button>)
 }
