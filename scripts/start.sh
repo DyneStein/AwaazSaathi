@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # One-command start: builds the front end (if needed), starts the server on all interfaces, prints LAN URLs + QR.
+# ./scripts/start.sh --online   also opens a free internet link (Cloudflare quick tunnel) so phones on any network can join.
 set -e
+ONLINE=0; [ "$1" = "--online" ] && ONLINE=1
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 [ -f .env ] || { cp .env.example .env; echo "Created .env from .env.example - add your keys"; }
@@ -16,14 +18,20 @@ pkill -f "uvicorn app.main:app" 2>/dev/null || true
 echo ""
 echo "  AwaazSaathi is starting on port 8000"
 echo "  ----------------------------------------------"
-echo "  This laptop:  http://localhost:8000          (home)"
-echo "  Presenter:    http://localhost:8000/admin"
-echo "  Expert:       http://localhost:8000/expert"
-echo "  Farmer:       http://$IP:8000/farmer"
-echo "  Dealer phone: http://$IP:8000/dealer"
+echo "  Phones (QR codes):  http://localhost:8000/connect"
+echo "  Operations map:     http://localhost:8000/admin"
+echo "  Farmer stage:       http://localhost:8000/farmer"
+echo "  Agronomist:         http://localhost:8000/expert"
+echo "  Same Wi-Fi link:    http://$IP:8000   (teammates: AwaazSaathi-Open.bat)"
 echo ""
-uv run python -c "import qrcode; q=qrcode.QRCode(border=1); q.add_data('http://$IP:8000/dealer'); q.print_ascii(invert=True)" 2>/dev/null || true
-echo "  (scan with the dealer's Android phone - same hotspot)"
+uv run python -c "import qrcode; q=qrcode.QRCode(border=1); q.add_data('http://$IP:8000/connect'); q.print_ascii(invert=True)" 2>/dev/null || true
+echo "  Scan to open the Connect page on a phone (same Wi-Fi)."
+[ "$ONLINE" = 1 ] && echo "  --online: an internet link for phones on any network starts once the server is up."
 echo ""
-(for i in $(seq 1 40); do curl -s localhost:8000/api/health >/dev/null && break; sleep 1; done; open "http://localhost:8000/connect" "http://localhost:8000/farmer" "http://localhost:8000/expert" "http://localhost:8000/admin") &
+(for i in $(seq 1 40); do curl -s localhost:8000/api/health >/dev/null && break; sleep 1; done
+ if [ "$ONLINE" = 1 ]; then
+   U=$(curl -s -X POST localhost:8000/api/tunnel/start | python3 -c "import json,sys; print(json.load(sys.stdin).get('url') or '')")
+   [ -n "$U" ] && echo "  Internet link: $U   (also on the Connect page)" || echo "  Internet link did not start; use the Connect page to retry."
+ fi
+ open "http://localhost:8000/connect" "http://localhost:8000/admin" "http://localhost:8000/farmer" "http://localhost:8000/expert") &
 exec uv run uvicorn app.main:app --host 0.0.0.0 --port 8000

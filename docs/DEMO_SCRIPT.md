@@ -1,5 +1,9 @@
 # Live demo: exact flow (about 5 minutes)
 
+**With phones (recommended):** on the laptop open `/connect`. Judges or teammates scan the three QR codes: **farmer**, **agronomist**, **dealer**. The farmer phone asks once for **Button phone** or **Smartphone**; pick Button phone and an **Okara** farmer (that farmer also gets the outbreak alert in step 6). Put **`/admin`** (the operations map) on the projector: every step below appears on it live. If phones are not on the Mac's Wi-Fi, press **Turn on internet link** on `/connect` first. Without the internet link, use **Choose a question** on the farmer phone instead of speaking.
+
+**Laptop only:** the steps below as written.
+
 **Before you start:** Admin tab → **Reset demo**. The Farmer tab shows two phones: a **button phone** (left) and a **smartphone** (right). The Expert tab is on the sign-in list. The dealer phone is logged in (PIN 1111) with alerts turned on.
 
 Keyboard works on the Farmer tab: number keys, **Enter** = green call key, **Esc** = red end key.

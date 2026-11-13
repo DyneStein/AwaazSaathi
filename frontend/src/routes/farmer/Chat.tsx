@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Camera, CheckCheck, Mic, Pause, Play, SendHorizontal, ShieldCheck, Square, UserRound, UserRoundCheck, Video, X, Eye, RotateCcw } from 'lucide-react'
+import { AlertTriangle, Settings, Camera, CheckCheck, Mic, Pause, Play, SendHorizontal, ShieldCheck, Square, UserRound, UserRoundCheck, Video, X, Eye, RotateCcw } from 'lucide-react'
 import { api, post, CROP_UR } from '../../lib/api'
 import { speak, stopAudio, useRecorder } from '../../lib/audio'
 import { Logo, Spinner } from '../../components/ui'
@@ -16,8 +16,8 @@ const hhmm = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-d
 
 /** The smartphone door: a chat with the helpline. Photo, voice note or typed question in; voice and text answer out.
  *  In production this is the helpline's WhatsApp number; here the chat is simulated inside the page. */
-export function Chat({ meta, phone, lang, inbox, resetKey, onResult, onHeard }: {
-  meta: any; phone: string; lang: Lang; inbox: any[]; resetKey: number; onResult: (r: any) => void; onHeard: (item: any) => void
+export function Chat({ meta, phone, lang, inbox, resetKey, onResult, onHeard, onSettings }: {
+  meta: any; phone: string; lang: Lang; inbox: any[]; resetKey: number; onResult: (r: any) => void; onHeard: (item: any) => void; onSettings?: () => void
 }) {
   const L = T[lang]
   const [msgs, setMsgs] = useState<Msg[]>([])
@@ -84,6 +84,7 @@ export function Chat({ meta, phone, lang, inbox, resetKey, onResult, onHeard }: 
         <Logo size={38} />
         <div className="flex-1 min-w-0"><div className="urdu !leading-[1.5] text-[18px] font-bold">{L.name}</div><div className="urdu !leading-[1.4] text-[12px] text-field-200 flex items-center gap-1"><ShieldCheck size={12} /> {L.sub}</div></div>
         <span className="p-2 text-field-200" title="The agronomist starts video calls"><Video size={20} /></span>
+        {onSettings && <button onClick={onSettings} aria-label="Settings" className="p-2 -ml-2 rounded-lg hover:bg-white/10"><Settings size={20} /></button>}
       </header>
 
       <main ref={endRef} className="flex-1 overflow-y-auto no-scrollbar px-3 py-3 space-y-2.5 bg-[#EEF3EF]" dir="rtl" data-testid="chat">

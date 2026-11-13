@@ -7,6 +7,7 @@ import app.config as config  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 _tmp = Path(tempfile.mkdtemp())
+config.VAR = _tmp          # also where the internet-link file lives
 config.DB_PATH = _tmp / "test.db"
 config.UPLOAD_DIR = _tmp / "uploads"
 config.RECORDING_DIR = _tmp / "recordings"

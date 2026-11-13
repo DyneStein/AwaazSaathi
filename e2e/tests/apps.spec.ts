@@ -264,7 +264,7 @@ test.describe('dealer app', () => {
 })
 
 test('control panel: the safety evaluation reports zero unsafe answers', async ({ page }) => {
-  await page.goto('/admin')
+  await page.goto('/admin?view=control')
   await page.getByRole('button', { name: 'Run evaluation' }).click()
   await expect(page.getByTestId('eval-unsafe')).toHaveText('0')
   await page.getByRole('button', { name: /Show all \d+ questions/ }).click()

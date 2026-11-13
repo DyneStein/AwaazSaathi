@@ -13,6 +13,7 @@ from .api import admin, dealer, expert, farmer
 from .db import SessionLocal
 from .models import KBEntry
 from .pipeline import retrieval
+from . import tunnel
 from .ws import hub
 
 STATIC = config.BACKEND / "static"
@@ -48,6 +49,7 @@ async def lifespan(_app):
     task = asyncio.create_task(_sla_loop())
     yield
     task.cancel()
+    tunnel.stop()
     hub.loop = None
 
 
@@ -99,7 +101,23 @@ def lan_ip() -> str:
 def lan():
     ip = lan_ip()
     base = f"http://{ip}:8000"
-    return {"ip": ip, "base": base, "dealer": f"{base}/dealer", "farmer": f"{base}/farmer", "expert": f"{base}/expert", "admin": f"{base}/admin"}
+    pub = tunnel.public_url()
+    return {"ip": ip, "base": base, "public": pub, "dealer": f"{base}/dealer", "farmer": f"{base}/farmer", "expert": f"{base}/expert", "admin": f"{base}/admin"}
+
+
+@app.get("/api/tunnel")
+def tunnel_status():
+    return tunnel.status()
+
+
+@app.post("/api/tunnel/start")
+def tunnel_start():
+    return tunnel.start()
+
+
+@app.post("/api/tunnel/stop")
+def tunnel_stop():
+    return tunnel.stop()
 
 
 @app.get("/api/qr.svg")

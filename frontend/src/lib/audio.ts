@@ -58,7 +58,7 @@ export function useRecorder() {
   const start = async () => {
     setError(null)
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Microphone needs HTTPS or localhost (see README: Chrome flag for LAN).')
+      setError('This link blocks the microphone (browsers allow it only on https or on the server computer). Use the internet link, a sample question or type it.')
       return false
     }
     try {

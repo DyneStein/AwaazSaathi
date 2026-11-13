@@ -25,7 +25,38 @@ def demo_phone(i: int) -> str:
 
 
 FARMER_TEHSILS = (["Okara"] * 6 + ["Depalpur"] * 3 + ["Renala Khurd"] * 2 + ["Sahiwal"] * 3 + ["Pakpattan"] * 2 +
-                  ["Multan"] * 3 + ["Khanewal"] * 2 + ["Vehari"] * 2 + ["Faisalabad"] * 3 + ["Jhang"] * 2 + ["Sheikhupura"] * 2)
+                  ["Multan"] * 3 + ["Khanewal"] * 2 + ["Vehari"] * 2 + ["Faisalabad"] * 3 + ["Jhang"] * 2 + ["Sheikhupura"] * 2 +
+                  # Wider pilot area (added for the operations map). Appended so the first 30 demo callers keep their numbers.
+                  ["Bahawalpur"] * 3 + ["Rahim Yar Khan"] * 3 + ["Lodhran"] * 2 + ["Muzaffargarh"] * 2 + ["Bahawalnagar"] * 3 +
+                  ["Toba Tek Singh"] * 3 + ["Sargodha"] * 3 + ["Kasur"] * 3 + ["Gujranwala"] * 2)
+FIRST_WAVE = 30
+
+# Main crops by area, used only for the older question history the map shows.
+REGION_CROPS = {
+    "south": (["Multan", "Khanewal", "Vehari", "Bahawalpur", "Rahim Yar Khan", "Lodhran", "Muzaffargarh", "Bahawalnagar"], ["cotton", "cotton", "wheat", "sugarcane"]),
+    "north": (["Sheikhupura", "Kasur", "Gujranwala"], ["rice", "rice", "wheat"]),
+    "centre": ([], ["wheat", "wheat", "maize", "sugarcane", "cotton"]),
+}
+
+
+def _history_questions(db, farmers: list, t0, rng: random.Random) -> None:
+    """Answered questions from 8 to 30 days ago, so the map has a month of activity.
+    All are older than the 7-day outbreak window, so they never change outbreaks, dealer demand or follow-ups."""
+    by_crop: dict[str, list] = {}
+    for k in json.loads((config.BACKEND / "data" / "kb_seed.json").read_text("utf-8")):
+        by_crop.setdefault(k["crop"], []).append(k)
+    seniors = [e[0] for e in EXPERTS if e[1] == "senior"]
+    for f in farmers:
+        crops = next((c for ts, c in REGION_CROPS.values() if f.tehsil in ts), REGION_CROPS["centre"][1])
+        for _ in range(rng.choice([0, 1, 1, 2, 2, 3])):
+            k = rng.choice(by_crop[rng.choice(crops)])
+            expert = rng.random() < 0.28
+            when = t0 - timedelta(days=rng.uniform(8, 30))
+            db.add(Query(farmer_id=f.id, tehsil=f.tehsil, crop=k["crop"], disease_tag=k["disease_tag"], transcript=k["title_ur"],
+                         normalized_query=k["title_ur"], channel=rng.choice(["voice", "voice", "voice", "photo", "text"]),
+                         status="approved" if expert else "answered_ai", route="junior" if expert else "ai",
+                         retrieval_score=round(rng.uniform(0.45, 0.8), 2), grounding=round(rng.uniform(0.85, 1.0), 2),
+                         answered_by=rng.choice(seniors) if expert else "AI", created_at=when, answered_at=when + timedelta(hours=rng.uniform(0.01, 6) if expert else 0)))
 
 DEALERS = [
     ("Haji Muhammad Aslam", "Aslam Zarai Markaz", "Okara", "1111"),
@@ -73,8 +104,9 @@ def run() -> None:
             db.add(KBEntry(**k, needs_expert_review=True, source="seed"))
         # Farmers
         farmers = []
+        wide = random.Random(7)   # a separate generator keeps the original seed (first 30 farmers, experts) unchanged
         for i, t in enumerate(FARMER_TEHSILS, 1):
-            f = Farmer(phone_hash=hash_phone(demo_phone(i)), tehsil=t, language=rng.choice(["pa", "pa", "ur"]))
+            f = Farmer(phone_hash=hash_phone(demo_phone(i)), tehsil=t, language=(rng if i <= FIRST_WAVE else wide).choice(["pa", "pa", "ur"]))
             db.add(f)
             farmers.append(f)
         for name, shop, t, pin in DEALERS:
@@ -119,6 +151,8 @@ def run() -> None:
                      normalized_query="مونجی کے پودے دائروں میں گر رہے ہیں اور تنا نیچے سے گل رہا ہے",
                      status="queued", route="junior", priority=1, reasons=["low_retrieval: 0.21 < 0.30"], retrieval_score=0.21,
                      created_at=t0 - timedelta(minutes=20), sla_due_at=t0 + timedelta(hours=config.SLA_HOURS["normal"]) - timedelta(minutes=20)))
+        db.flush()
+        _history_questions(db, farmers, t0, wide)
         db.add(EventLog(kind="system", message="Demo data reset"))
         db.commit()
         retrieval.rebuild(db)

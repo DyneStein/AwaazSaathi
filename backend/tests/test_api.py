@@ -42,7 +42,7 @@ def test_prompts_both_languages_have_the_same_keys(client):
 
 def test_personas_and_canned_questions(client):
     m = client.get("/api/demo/personas").json()
-    assert len(m["personas"]) == 30 and m["crops"]["1"] == "wheat" and "common_aphid" in m["canned"]
+    assert len(m["personas"]) == len(seed.FARMER_TEHSILS) == 54 and m["crops"]["1"] == "wheat" and "common_aphid" in m["canned"]
 
 
 # ---------- farmer call ----------
@@ -438,4 +438,47 @@ def test_reset_never_leaves_the_database_without_tables(client):
         stop.set()
         t.join()
     assert not errors, errors[:3]
-    assert client.get("/api/admin/health").json()["counts"]["farmers"] == 30
+    assert client.get("/api/admin/health").json()["counts"]["farmers"] == 54
+
+
+def test_operations_map_counts_and_privacy(client):
+    m = client.get("/api/admin/map").json()
+    assert m["totals"]["farmers"] == 54 and len(m["tehsils"]) == 20
+    assert sum(t["farmers"] for t in m["tehsils"]) == 54
+    assert m["totals"]["questions"] == m["totals"]["ai"] + m["totals"]["expert"] + m["totals"]["waiting"]
+    # Only tehsil centres are sent: no question or farmer carries its own coordinates.
+    assert all("lat" not in q and "lon" not in q for q in m["questions"])
+    week = client.get("/api/admin/map?days=7").json()
+    assert week["totals"]["questions"] < m["totals"]["questions"]
+
+
+def test_older_history_never_changes_outbreaks_or_dealer_demand(client):
+    # A month of seeded history, but inside the 7-day window only the original demo cases count.
+    counters = client.get("/api/admin/outbreak-counters").json()
+    assert all(c["count"] < 3 and not c["active"] for c in counters)
+    okara = [c for c in counters if c["tehsil"] == "Okara" and c["disease_tag"] == "wheat_yellow_rust"]
+    assert okara and okara[0]["count"] == 1
+    assert client.get("/api/admin/health").json()["counts"]["outbreaks"] == 0
+
+
+def test_outbreak_shows_on_the_map(client):
+    for k in ("rust_okara_2", "rust_okara_3"):
+        client.post(f"/api/admin/canned/{k}")
+    m = client.get("/api/admin/map").json()
+    okara = next(t for t in m["tehsils"] if t["name"] == "Okara")
+    assert okara["outbreak"]["disease_tag"] == "wheat_yellow_rust" and m["totals"]["outbreaks"] == 1
+    assert {d["shop"] for d in m["dealers"] if d["alerted"]} >= {"Aslam Zarai Markaz"}
+
+
+def test_internet_link_status_and_lan_info(client, monkeypatch):
+    from app import tunnel
+    monkeypatch.setattr(tunnel, "binary", lambda: None)
+    assert client.get("/api/tunnel").json() == {"available": False, "running": False, "url": None, "error": None}
+    r = client.post("/api/tunnel/start").json()
+    assert r["running"] is False and "cloudflared" in r["error"]
+    lan = client.get("/api/lan").json()
+    assert lan["base"].startswith("http://") and lan["public"] is None
+    (config.VAR / "public_url.txt").write_text("https://example.trycloudflare.com")
+    assert client.get("/api/lan").json()["public"] == "https://example.trycloudflare.com"
+    client.post("/api/tunnel/stop")
+    assert client.get("/api/lan").json()["public"] is None

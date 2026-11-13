@@ -21,11 +21,29 @@ cp .env.example .env        # then paste your free keys (see below), optional
 | App | URL | Who |
 |---|---|---|
 | Home | http://localhost:8000 | |
-| Farmer call simulator | `/farmer` | farmer (2nd laptop) |
-| Expert console | `/expert` | agronomists |
-| Dealer app (PWA) | `/dealer` | dealer's Android phone |
-| Presenter panel | `/admin` | you (reset, outbreak, offline switch) |
+| **Connect phones** (QR codes) | `/connect` | scan with each phone |
+| Farmer | `/farmer` | laptop: both phones side by side. Phone: asks "button phone or smartphone" first |
+| Agronomist app | `/expert` | juniors and seniors |
+| Dealer app (PWA) | `/dealer` | dealer's phone (PIN 1111) |
+| **Operations map** + demo control | `/admin` | the live Punjab map; **Demo control** tab: reset, outbreak, evaluation |
 | API docs | `/docs` | |
+
+### Run the demo on phones (three phones + the map)
+1. Start the server on the Mac (`./scripts/start.sh`, or double-click `scripts/mac/Start AwaazSaathi.command`).
+2. Open **`/connect`** on the laptop. It shows one QR code each for the **farmer**, **agronomist** and **dealer**. Scan each with a different phone.
+   - **Same Wi-Fi / hotspot** (default): phones must be on the same network as the Mac. Phone browsers block the microphone on a plain `http://` address, so the farmer phone uses the **Choose a question** list (or typing).
+   - **Any network**: press **Turn on internet link** on `/connect` (or start with `./scripts/start.sh --online`). A free Cloudflare quick tunnel gives an `https://….trycloudflare.com` link, the QR codes switch to it, phones can use mobile data, and **the microphone works on phones**. Needs `brew install cloudflared` once. The link is random, temporary and has no login: share it only with the team and judges.
+3. The farmer phone asks once: **Button phone** or **Smartphone**, and which (fictional) farmer. **Settings** (gear icon) switches phone type, farmer, language and subtitles at any time.
+4. Put `/admin` on the projector: questions, callbacks, outbreaks and dealer confirmations appear on the map live.
+
+Everything still runs on one laptop without phones, as before.
+
+### A teammate's laptop (Windows)
+Download the repo (green **Code** button → Download ZIP, extract) and double-click:
+- **`AwaazSaathi-Open.bat`**: finds the Mac on the same Wi-Fi by itself (or asks for the Mac's IP or the internet link) and opens Connect, the map, Farmer and Agronomist in Chrome.
+- **`AwaazSaathi-Close.bat`**: closes those windows again. A server running on the Mac keeps running; stop it on the Mac (`scripts/mac/Stop AwaazSaathi.command`).
+
+To run the whole server on Windows instead (no Mac): `scripts\windows\Run-Server-On-This-PC.bat` (about 4 GB of downloads on first run; not yet tested on Windows).
 
 - Reset the demo data: `./scripts/reset.sh` or the **Reset demo** button in `/admin`.
 - Run the backend tests (decision rules, every API, the safety evaluation): `cd backend && uv run pytest`

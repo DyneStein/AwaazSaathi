@@ -13,3 +13,7 @@
 11. **The safety evaluation is small and team-written** (56 questions). It shows the rules behave as designed and catches regressions; it does not measure accuracy with real farmers. Two Punjabi-dialect questions in it are sent to a human although the knowledge base covers them.
 12. **Health-emergency detection is a short phrase list** (dizziness, vomiting, fainting, swallowed poison). It only decides that a human must take over and tells the caller to go to hospital; it is not medical triage.
 13. **Knowledge sign-off is a button.** A senior can mark a starter entry as signed off in the app; in the demo data none are, and the screens say so.
+14. **The map shows tehsil centres, not farms.** AwaazSaathi stores only a farmer's tehsil, so question dots are spread around the tehsil centre for display. The demo history (about 90 questions over 30 days, 54 farmers in 20 tehsils) is generated seed data, not field data.
+15. **The internet link is a free Cloudflare quick tunnel** with a random address and no login. Anyone who has the link can open every screen, including demo control. It is for demos only; production needs real hosting with accounts.
+16. **Phone microphones need https.** On the same-Wi-Fi `http://` link, phone browsers block the microphone, so the farmer phone sends listed or typed questions there. The internet link (https) allows speaking.
+

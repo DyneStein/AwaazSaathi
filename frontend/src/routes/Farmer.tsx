@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Captions, Keyboard, Mic, MicOff, Send, SlidersHorizontal } from 'lucide-react'
 import { api, post } from '../lib/api'
 import { beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
@@ -9,6 +9,7 @@ import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../c
 import { KeypadPhone, type Lcd, type PhoneKey } from '../components/KeypadPhone'
 import { Decision } from '../components/Decision'
 import { Chat, type Lang } from './farmer/Chat'
+import { KeypadScreen, SettingsSheet, SetupScreen, readSetup, saveSetup, type PhoneSetup } from './farmer/PhoneMode'
 
 type Step = 'idle' | 'connecting' | 'welcome' | 'notice' | 'tehsil' | 'tehsil_pick' | 'crop' | 'duration' | 'ask' | 'thinking'
   | 'answer' | 'escalated' | 'more' | 'consent' | 'ended'
@@ -43,6 +44,11 @@ const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${St
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export default function Farmer() {
+  // On a real phone (opened from the QR code, or any narrow screen) the page becomes one phone; on a laptop it is the presenter stage.
+  const [params] = useSearchParams()
+  const phoneMode = params.get('device') === 'phone' || (params.get('device') !== 'stage' && window.innerWidth < 768)
+  const [setup, setSetup] = useState<PhoneSetup | null>(() => (phoneMode ? readSetup() : null))
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [meta, setMeta] = useState<any>(null)
   const [prompts, setPrompts] = useState<Record<string, Prompt>>({})
   const [phone, setPhone] = useState('')
@@ -76,7 +82,11 @@ export default function Farmer() {
   const logEnd = useRef<HTMLDivElement>(null)   // the scrolling captions box
 
   useEffect(() => {
-    api('/api/demo/personas').then((m) => { setMeta(m); setPhone(m.personas[24]?.phone || m.personas[0].phone) })
+    api('/api/demo/personas').then((m) => {
+      setMeta(m)
+      const saved = phoneMode ? readSetup() : null
+      setPhone(saved && m.personas.some((p: any) => p.phone === saved.phone) ? saved.phone : m.personas[24]?.phone || m.personas[0].phone)
+    })
     api('/api/status').then((s) => setOffline(s.offline)).catch(() => {})
   }, [])
   useEffect(() => { api(`/api/prompts?lang=${lang}`).then(setPrompts).catch(() => {}); try { localStorage.setItem('farmerLang', lang) } catch { /* ignore */ } }, [lang])
@@ -316,6 +326,35 @@ export default function Farmer() {
 
   const askOpen = step === 'ask' && !!call
   const showKeypad = view !== 'smart', showSmart = view !== 'keypad'
+
+  if (phoneMode) {
+    const applySetup = (s: PhoneSetup) => {
+      if (setup && s.kind !== setup.kind && inCall) endCall()
+      saveSetup(s); setSetup(s); setPhone(s.phone)
+    }
+    if (!setup) return <SetupScreen meta={meta} initial={readSetup()} onDone={(s) => { unlockAudio(); applySetup(s) }} />
+    const settings = settingsOpen && <SettingsSheet meta={meta} setup={setup} lang={lang} inCall={inCall} onLang={setLang} onChange={applySetup}
+      onRestart={() => { if (inCall) endCall(); setSettingsOpen(false); saveSetup(null); setSetup(null) }} onClose={() => setSettingsOpen(false)} />
+    const last = [...lines].reverse().find((l) => l.who === 'line')
+    if (setup.kind === 'keypad') return (
+      <div className="relative">
+        <KeypadScreen lcd={lcd} onKey={onKey} ringing={aux?.stage === 'ringing'} clock={new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          connected={ws.connected} onSettings={() => setSettingsOpen(true)} askOpen={askOpen} recording={rec.recording} note={note}
+          samples={meta ? Object.entries(meta.canned).slice(0, 5).map(([k, c]: any) => [k, c.label.split(':')[0], c.transcript]) : []}
+          onSample={(t) => submit({ transcript: t })} onTyped={(t) => submit({ transcript: t })}
+          subtitle={setup.subtitles && last && (inCall || aux) ? { ur: last.ur, en: last.en } : null} />
+        {settings && <div className="fixed inset-0 z-50">{settings}</div>}
+      </div>)
+    return (
+      <div className="min-h-[100dvh] bg-canvas">
+        <DeviceFrame statusTone="dark" label="Smartphone">
+          <Chat meta={meta} phone={phone} lang={lang} inbox={inbox} resetKey={resetKey} onResult={setResult} onHeard={markHeard} onSettings={() => setSettingsOpen(true)} />
+          <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
+          {settings}
+        </DeviceFrame>
+      </div>)
+  }
+
   return (
     <div className="min-h-[100dvh] bg-canvas">
       <header className="bg-white border-b border-line">

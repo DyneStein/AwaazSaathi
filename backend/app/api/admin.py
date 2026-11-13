@@ -180,3 +180,58 @@ def evaluation(db=Depends(get_db)):
 def rebuild(db=Depends(get_db)):
     retrieval.rebuild(db)
     return {"ok": True}
+
+
+@r.get("/map")
+def map_data(days: int = 30, db=Depends(get_db)):
+    """Everything the operations map shows. Locations are tehsil centres only: the system never stores a farm's position."""
+    from collections import Counter, defaultdict
+
+    from ..models import Dealer, DealerAlert
+    since = now() - timedelta(days=days)
+    titles = {k.disease_tag: k.title_en for k in db.query(KBEntry)}
+    farmers = Counter(t for (t,) in db.query(Farmer.tehsil))
+    qs = db.query(Query).filter(Query.created_at >= since).order_by(Query.id.desc()).all()
+    by_t: dict[str, Counter] = defaultdict(Counter)
+    problems: dict[str, Counter] = defaultdict(Counter)
+    for q in qs:
+        by_t[q.tehsil][_bucket(q.status)] += 1
+        if q.disease_tag:
+            problems[q.tehsil][q.disease_tag] += 1
+    active = [o for o in db.query(Outbreak).filter(Outbreak.status == "active").order_by(Outbreak.id)]
+    counter_rows = counters(db)
+    dealers = db.query(Dealer).order_by(Dealer.id).all()
+    confirmed = {a.dealer_id for a in db.query(DealerAlert).filter(DealerAlert.confirmed_at.isnot(None))}
+    alerted = {a.dealer_id for a in db.query(DealerAlert)}
+    tehsils = []
+    for name, t in outbreak.TEHSILS.items():
+        c = by_t.get(name, Counter())
+        tehsils.append({
+            "name": name, "ur": t["ur"], "district": t["district"], "lat": t["lat"], "lon": t["lon"],
+            "neighbors": t.get("neighbors", []), "farmers": farmers.get(name, 0),
+            "questions": sum(c.values()), "ai": c["ai"], "expert": c["expert"], "waiting": c["waiting"],
+            "problems": [{"tag": k, "name_en": titles.get(k, k), "count": n} for k, n in problems.get(name, Counter()).most_common(3)],
+            "outbreak": next(({"id": o.id, "disease_tag": o.disease_tag, "name_en": titles.get(o.disease_tag, o.disease_tag),
+                               "cases": o.case_count, "at": iso(o.created_at)} for o in active if o.tehsil == name), None),
+        })
+    return {
+        "days": days,
+        "totals": {"farmers": sum(farmers.values()), "questions": len(qs), "ai": sum(1 for q in qs if _bucket(q.status) == "ai"),
+                   "expert": sum(1 for q in qs if _bucket(q.status) == "expert"), "waiting": sum(1 for q in qs if _bucket(q.status) == "waiting"),
+                   "outbreaks": len(active), "dealers": len(dealers), "experts": db.query(Expert).count()},
+        "tehsils": tehsils,
+        "questions": [{"id": q.id, "tehsil": q.tehsil, "crop": q.crop, "channel": q.channel, "status": q.status, "state": _bucket(q.status),
+                       "problem": titles.get(q.disease_tag or "", None), "emergency": any(str(x).startswith("health_emergency") for x in (q.reasons or [])),
+                       "at": iso(q.created_at)} for q in qs[:120]],
+        "dealers": [{"id": d.id, "shop": d.shop, "name": d.name, "tehsil": d.tehsil, "alerted": d.id in alerted, "confirmed": d.id in confirmed} for d in dealers],
+        "watch": [c for c in counter_rows if c["count"] > 0][:8],
+    }
+
+
+def _bucket(status: str) -> str:
+    """ai = answered by the AI, expert = answered by an agronomist, waiting = with the experts now."""
+    if status == "answered_ai":
+        return "ai"
+    if status == "approved":
+        return "expert"
+    return "waiting"

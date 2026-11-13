@@ -3,6 +3,8 @@
 # The Mac stays awake (no sleep) on purpose. To allow sleep again: restart the Mac, or run: pkill caffeinate
 echo "Stopping AwaazSaathi..."
 if pkill -f "uvicorn app.main:app"; then echo "  Server stopped"; else echo "  Server was not running"; fi
+pkill -f "cloudflared tunnel --no-autoupdate --url http://localhost:8000" >/dev/null 2>&1 && echo "  Internet link stopped"
+rm -f backend/var/public_url.txt "$HOME/Desktop/AwaazSaathi/backend/var/public_url.txt"
 OLLAMA=$(command -v ollama || echo /opt/homebrew/bin/ollama)
 "$OLLAMA" stop gemma3:4b >/dev/null 2>&1
 brew services stop ollama >/dev/null 2>&1 || pkill -x ollama

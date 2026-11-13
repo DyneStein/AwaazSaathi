@@ -1,24 +1,20 @@
-# AwaazSaathi demo: steps for the Windows laptop
+# AwaazSaathi demo: steps for a teammate's laptop (Windows)
 
-> **Rule:** this laptop, Dyen's Mac and the dealer phone must be on the **same Wi-Fi or hotspot**, and the server must be running on the Mac.
+> The server runs on **Dyen's Mac**. Start it there first (`scripts/mac/Start AwaazSaathi.command` or `./scripts/start.sh`).
 
-## Today (2 minutes): use the server already running on Dyen's Mac
-1. Connect the Windows laptop to the SAME hotspot as Dyen's Mac (and the dealer's Android phone).
-2. Open https://github.com/DyneStein/AwaazSaathi, click the green **Code** button, then **Download ZIP**. Right-click the ZIP and choose **Extract All**.
-3. In the extracted folder, double-click **Open-Demo.bat**.
+## Join the demo (2 minutes)
+1. Open https://github.com/DyneStein/AwaazSaathi, click the green **Code** button, then **Download ZIP**. Right-click the ZIP and choose **Extract All**. (Or `git pull` if you already have it.)
+2. Double-click **AwaazSaathi-Open.bat**.
    - If Windows says "Windows protected your PC", click **More info**, then **Run anyway**.
-4. It finds Dyen's Mac on the network by itself, retrying up to 6 times (about 30 seconds). Only if it still can't, it asks for the IP (shown on the Mac at http://localhost:8000/connect), or press Enter to search again.
-5. Chrome opens 4 tabs: **Connect** (QR code), **Farmer**, **Expert** and **Admin**. Click **Allow** when Chrome asks for the microphone.
-6. Dealer phone: scan the QR code on the Connect tab and log in as **Aslam Zarai Markaz**, PIN **1111**, then tap **Turn on alert sound and vibration**.
-7. Before presenting: on the Admin tab press **Reset demo**.
+3. **Same Wi-Fi or hotspot as the Mac:** it finds the Mac by itself.
+   **Different network:** on the Mac open **Connect phones** (`/connect`), choose **Any network**, press **Turn on internet link**, and type that `https://...trycloudflare.com` link when the .bat asks.
+4. Chrome opens: **Connect** (QR codes for the phones), the **Operations map**, **Farmer** and **Agronomist**. Click **Allow** when Chrome asks for the microphone.
 
-**If the Wi-Fi or hotspot changes:** put both laptops and the phone on the new network, double-click **Open-Demo.bat** again (it finds the Mac's new address), and re-scan the QR code on the phone.
+## Close it
+Double-click **AwaazSaathi-Close.bat**. It closes only the AwaazSaathi windows. The server on the Mac keeps running; stop it on the Mac with `scripts/mac/Stop AwaazSaathi.command`.
 
-If Open-Demo.bat says it "cannot reach the Mac": check both are on the same hotspot, and that the server is running on the Mac (on the Mac run `./scripts/start.sh` in the AwaazSaathi folder).
+## Phones
+Scan the QR codes on the Connect page: phone 1 = farmer (choose button phone or smartphone), phone 2 = agronomist, phone 3 = dealer (Aslam Zarai Markaz, PIN 1111). On the same Wi-Fi the farmer phone uses the question list, because phone browsers block the microphone on http links. With the internet link the microphone works.
 
-## Later (first run about 45 minutes, about 4 GB download): run everything on the Windows laptop itself
-1. Download and extract the ZIP as above (or `git clone`).
-2. Double-click **AwaazSaathi-Setup-and-Run.bat**. It installs Python (uv), ffmpeg, whisper.cpp, the Whisper model, Ollama and gemma3, then starts the server and opens all screens.
-3. When Windows Firewall asks about Python, click **Allow** (needed for the dealer phone).
-4. Keep the "AwaazSaathi server" window open during the demo; close it to stop.
-Next time, the same .bat starts in seconds. Note: this script has not been tested on Windows yet. If a step fails, it prints what is missing and the demo still runs with typed and sample questions.
+## Run the whole server on Windows (only if the Mac is not available)
+Double-click `scripts\windows\Run-Server-On-This-PC.bat`. The first run downloads about 4 GB (speech and language models) and takes about 45 minutes; later runs start in seconds. Allow Python through the Windows Firewall when asked. This script has not been tested on Windows yet; if a step fails it prints what is missing, and typed and sample questions still work.

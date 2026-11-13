@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
-import { Phone, Stethoscope, Store, SlidersHorizontal, ChevronRight } from 'lucide-react'
+import { Phone, Stethoscope, Store, Map as MapIcon, ChevronRight, QrCode } from 'lucide-react'
 import { Logo } from '../components/ui'
 
 const DOORS = [
   { to: '/farmer', t: 'Farmer phones', ur: 'کسان', d: 'A button phone for the voice call, and a smartphone for photos, chat and video.', icon: Phone },
   { to: '/expert', t: 'Agronomist app', ur: 'ماہرین', d: 'Juniors draft, seniors approve, and approved answers join the knowledge base.', icon: Stethoscope },
   { to: '/dealer', t: 'Dealer app', ur: 'ڈیلر', d: 'Outbreak alerts, a stock checklist and local demand, on the dealer’s phone.', icon: Store },
-  { to: '/admin', t: 'Demo control', ur: 'کنٹرول', d: 'Reset data, trigger the outbreak, run the safety evaluation.', icon: SlidersHorizontal },
+  { to: '/admin', t: 'Operations map', ur: 'نقشہ', d: 'Live map of farmers, questions, dealers and outbreaks, plus the demo controls.', icon: MapIcon },
 ]
 
 export default function Home() {
@@ -24,6 +24,7 @@ export default function Home() {
               <ChevronRight size={18} className="text-muted shrink-0" />
             </Link></li>))}
         </ul>
+        <Link to="/connect" className="mt-4 btn btn-primary w-full !py-3.5"><QrCode size={18} />Put the demo on phones</Link>
       </div>
     </div>
   )
