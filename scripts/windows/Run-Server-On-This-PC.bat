@@ -61,6 +61,9 @@ echo.
 echo [6/8] Internet link tool (cloudflared, optional: lets phones join from any network)
 if not exist tools\cloudflared.exe curl -L --fail -o tools\cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
 if not exist tools\cloudflared.exe echo !! cloudflared missing: phones must be on the same Wi-Fi as this PC.
+if not exist tools\ngrok.exe (
+  curl -L --fail -o tools\ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip && powershell -NoProfile -Command "Expand-Archive -Force tools\ngrok.zip tools\ngrok_x; Copy-Item tools\ngrok_x\ngrok.exe tools\ngrok.exe"
+)
 
 echo.
 echo [7/8] Python packages

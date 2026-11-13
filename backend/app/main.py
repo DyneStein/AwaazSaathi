@@ -1,6 +1,7 @@
 """AwaazSaathi API + static front end on one port."""
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -72,6 +73,8 @@ async def lifespan(_app):
         db.close()
     task = asyncio.create_task(_sla_loop())
     secure = asyncio.create_task(_tls_loop(_app)) if tls.enabled() else None
+    if os.getenv("AWAAZ_ONLINE") == "1":   # ./scripts/start.sh --online: get the internet link without pressing anything
+        tunnel.start(wait_s=0)
     yield
     task.cancel()
     if secure:

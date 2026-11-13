@@ -33,11 +33,13 @@ cp .env.example .env        # then paste your free keys (see below), optional
 2. Open **`/connect`** on the laptop. It shows one QR code each for the **farmer**, **agronomist** and **dealer**. Scan each with a different phone.
    - **Anywhere, no internet (recommended):** turn on a **hotspot on one phone**, connect the Mac and every other phone to it. The codes follow the Mac's new address within seconds. Everything runs on the Mac, so nothing outside is needed.
    - **Same Wi-Fi / hotspot** (default): phones must be on the same network as the Mac. The QR codes use the **secure Wi-Fi link** `https://<Mac IP>:8443`, so **the microphone works on phones**. The certificate is made on the Mac, so each phone warns once: Android, tap **Advanced → Proceed**; iPhone, **Show Details → visit this website**. (Some university or office Wi-Fi keeps devices apart; then use Any network.) Set `AWAAZ_HTTPS=0` to switch the secure link off.
-   - **Any network (optional)**: press **Turn on internet link** on `/connect` (or start with `./scripts/start.sh --online`). A free Cloudflare quick tunnel gives an `https://….trycloudflare.com` link, the QR codes switch to it, phones can use mobile data, and **the microphone works on phones**. Needs `brew install cloudflared` once. The link is random, temporary and has no login: share it only with the team and judges.
+   - **Any network (optional)**: press **Turn on internet link** on `/connect` (or start with `./scripts/start.sh --online`). The server tries tunnel tools in turn and keeps the link alive in the background, replacing it if it drops: **ngrok** first if set up (free account, **fixed address**, so QR codes never change: `brew install ngrok`, then put `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` in `.env`), then a **Cloudflare** quick tunnel (`brew install cloudflared`, random address), then **localhost.run** (built-in ssh, random address, not tested here). The link uses https, so the microphone works on phones. It has no login: share it only with the team and judges.
 3. The farmer phone asks once: **Button phone** or **Smartphone**, and which (fictional) farmer. **Settings** (gear icon) switches phone type, farmer, language and subtitles at any time.
 4. Put `/admin` on the projector: questions, callbacks, outbreaks and dealer confirmations appear on the map live.
 
 Everything still runs on one laptop without phones, as before.
+
+**On the phones:** the farmer phone keeps its screen awake, rings when the agronomist's answer arrives (button phone or smartphone), and rings a missed call when it reconnects. The agronomist can video-call the farmer's smartphone; across networks the call goes through public STUN/TURN relays. Voice clips are normalised to about -14 LUFS and boosted again on the phone so they carry in a room: turn the phone's media volume up.
 
 ### A teammate's laptop (Windows)
 Download the repo (green **Code** button → Download ZIP, extract) and double-click:

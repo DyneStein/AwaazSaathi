@@ -26,12 +26,9 @@ echo "  Same Wi-Fi link:    http://$IP:8000   (teammates: AwaazSaathi-Open.bat)"
 echo ""
 uv run python -c "import qrcode; q=qrcode.QRCode(border=1); q.add_data('http://$IP:8000/connect'); q.print_ascii(invert=True)" 2>/dev/null || true
 echo "  Scan to open the Connect page on a phone (same Wi-Fi)."
-[ "$ONLINE" = 1 ] && echo "  --online: an internet link for phones on any network starts once the server is up."
+[ "$ONLINE" = 1 ] && { echo "  --online: an internet link for phones on any network starts once the server is up."; export AWAAZ_ONLINE=1; }
 echo ""
 (for i in $(seq 1 40); do curl -s localhost:8000/api/health >/dev/null && break; sleep 1; done
- if [ "$ONLINE" = 1 ]; then
-   U=$(curl -s -X POST localhost:8000/api/tunnel/start | python3 -c "import json,sys; print(json.load(sys.stdin).get('url') or '')")
-   [ -n "$U" ] && echo "  Internet link: $U   (also on the Connect page)" || echo "  Internet link did not start; use the Connect page to retry."
- fi
+ [ "$ONLINE" = 1 ] && echo "  The internet link is being set up in the background: see the Connect page."
  open "http://localhost:8000/connect" "http://localhost:8000/admin" "http://localhost:8000/farmer" "http://localhost:8000/expert") &
 exec uv run uvicorn app.main:app --host 0.0.0.0 --port 8000

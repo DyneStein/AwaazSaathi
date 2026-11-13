@@ -9,7 +9,7 @@ import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../c
 import { KeypadPhone, type Lcd, type PhoneKey } from '../components/KeypadPhone'
 import { Decision } from '../components/Decision'
 import { Chat, type Lang } from './farmer/Chat'
-import { KeypadScreen, SettingsSheet, SetupScreen, VoiceBanner, micAllowed, readSetup, saveSetup, useSecureLink, type PhoneSetup } from './farmer/PhoneMode'
+import { CallOverlay, KeypadScreen, SettingsSheet, SetupScreen, VoiceBanner, micAllowed, readSetup, saveSetup, useKeepAwake, useSecureLink, type PhoneSetup } from './farmer/PhoneMode'
 
 type Step = 'idle' | 'connecting' | 'welcome' | 'notice' | 'tehsil' | 'tehsil_pick' | 'crop' | 'duration' | 'ask' | 'thinking'
   | 'answer' | 'escalated' | 'more' | 'consent' | 'ended'
@@ -50,6 +50,7 @@ export default function Farmer() {
   const [setup, setSetup] = useState<PhoneSetup | null>(() => (phoneMode ? readSetup() : null))
   const [settingsOpen, setSettingsOpen] = useState(false)
   const secureLink = useSecureLink()
+  useKeepAwake(phoneMode && !!setup)
   const [meta, setMeta] = useState<any>(null)
   const [prompts, setPrompts] = useState<Record<string, Prompt>>({})
   const [phone, setPhone] = useState('')
@@ -114,6 +115,27 @@ export default function Farmer() {
     if (m.event === 'offline') setOffline(m.data.on)
   })
   const video = useVideoCall(ws.send, myTopic)
+
+  // A call that arrived while the phone was asleep or offline rings as soon as the phone is back (phone mode only).
+  const recheck = useRef(false)
+  const rang = useRef<Set<number>>(new Set())
+  const wasConnected = useRef(false)
+  useEffect(() => {
+    if (ws.connected && !wasConnected.current && farmerId) { recheck.current = true; loadInbox() }
+    wasConnected.current = ws.connected
+  }, [ws.connected, farmerId, loadInbox])
+  useEffect(() => {
+    const h = () => { if (document.visibilityState === 'visible') { recheck.current = true; loadInbox() } }
+    document.addEventListener('visibilitychange', h); return () => document.removeEventListener('visibilitychange', h)
+  }, [loadInbox])
+  useEffect(() => {
+    if (!recheck.current || !phoneMode) return
+    recheck.current = false
+    const recent = Date.now() - 15 * 60 * 1000
+    const it = inbox.find((i) => !i.heard && ['callback', 'followup'].includes(i.kind) && (i.channel || 'voice') === 'voice' && new Date(i.created_at).getTime() > recent && !rang.current.has(i.id))
+    if (it && lineFree()) { rang.current.add(it.id); setMenu(null); setAux({ kind: it.kind, stage: 'ringing', data: { query_id: it.query_id, text: it.text_ur, audio_url: it.audio_url, by: 'the agronomist' } }) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inbox, phoneMode])
 
   // The phone keeps ringing until it is answered or rejected.
   useEffect(() => {
@@ -344,6 +366,10 @@ export default function Farmer() {
           samples={meta ? Object.entries(meta.canned).slice(0, 5).map(([k, c]: any) => [k, c.label.split(':')[0], c.transcript]) : []}
           onSample={(t) => submit({ transcript: t })} onTyped={(t) => submit({ transcript: t })}
           subtitle={setup.subtitles && last && (inCall || aux) ? { ur: last.ur, en: last.en } : null} />
+        {video.state !== 'idle' && <div className="absolute inset-0 z-40" data-testid="video-on-keypad">
+          <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
+          <div className="absolute top-3 inset-x-3 z-50 text-center text-[12px] text-white/90 bg-black/45 rounded-lg px-2 py-1">A video call needs the farmer’s smartphone. Shown here for the demo.</div>
+        </div>}
         {settings && <div className="fixed inset-0 z-50">{settings}</div>}
       </div>)
     return (
@@ -351,6 +377,7 @@ export default function Farmer() {
         <DeviceFrame statusTone="dark" label="Smartphone">
           {!micAllowed() && <div className="shrink-0 order-last px-3 pb-2 bg-white"><VoiceBanner url={secureLink} /></div>}
           <Chat meta={meta} phone={phone} lang={lang} inbox={inbox} resetKey={resetKey} onResult={setResult} onHeard={markHeard} onSettings={() => setSettingsOpen(true)} />
+          <CallOverlay aux={aux} secs={secs} onAnswer={acceptAux} onEnd={() => { stopAudio(); setAux(null) }} onChoice={followReply} />
           <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
           {settings}
         </DeviceFrame>

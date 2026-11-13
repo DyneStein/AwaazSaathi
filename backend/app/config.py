@@ -22,6 +22,11 @@ AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY", "").strip()
 AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION", "centralindia").strip()
 PHONE_HASH_SECRET = os.getenv("PHONE_HASH_SECRET", "dev-secret")
 
+# Optional internet link for phones on other networks (see app/tunnel.py). ngrok gives a FIXED address with a free account.
+NGROK_AUTHTOKEN = os.getenv("NGROK_AUTHTOKEN", "").strip()
+NGROK_DOMAIN = os.getenv("NGROK_DOMAIN", "").strip()          # e.g. your-name.ngrok-free.app (the free fixed address)
+LINK_PROVIDERS = os.getenv("LINK_PROVIDERS", "ngrok,cloudflare,localhostrun").split(",")
+
 GEMINI_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash-lite")
 GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
 GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3")

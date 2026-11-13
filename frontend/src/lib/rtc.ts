@@ -1,7 +1,12 @@
 import { useCallback, useRef, useState } from 'react'
 
-/** Live video call (WebRTC). Signalling goes through our own WebSocket relay; on a LAN no TURN server is needed. */
-const ICE = [{ urls: 'stun:stun.l.google.com:19302' }]
+/** Live video call (WebRTC). Signalling goes through our own WebSocket relay.
+ *  On one Wi-Fi or hotspot the phones talk directly. Across networks (mobile data) the public STUN servers find a path,
+ *  and the free Open Relay TURN servers carry the call when the carrier's NAT allows nothing else. */
+const ICE: RTCIceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
+]
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connected' | 'ended'
 
@@ -20,12 +25,13 @@ export function useVideoCall(send: (to: string, event: string, data: unknown) =>
     return navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: true })
   }
   const makePC = (to: string, stream: MediaStream) => {
-    const p = new RTCPeerConnection({ iceServers: ICE })
+    const p = new RTCPeerConnection({ iceServers: ICE, iceCandidatePoolSize: 2 })
     stream.getTracks().forEach((t) => p.addTrack(t, stream))
     p.onicecandidate = (e) => e.candidate && send(to, 'rtc_ice', { from: myTopic, candidate: e.candidate.toJSON() })
     p.ontrack = (e) => setRemote(e.streams[0])
     p.onconnectionstatechange = () => {
       if (p.connectionState === 'connected') setState('connected')
+      if (p.connectionState === 'failed') setError('The two phones could not reach each other. Put them on the same Wi-Fi or hotspot and call again.')
       if (['failed', 'closed'].includes(p.connectionState)) cleanup('ended')
     }
     pc.current = p

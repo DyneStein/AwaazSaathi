@@ -27,7 +27,8 @@ export default function Connect() {
     api('/api/tunnel').then(setTunnel).catch(() => {})
     // The Mac may move to a phone hotspot during setup: the codes follow its new address by themselves.
     const t = setInterval(() => api('/api/lan').then((l) => setLan((old: any) => (old && old.ip === l.ip && old.secure === l.secure && old.public === l.public ? old : l))).catch(() => {}), 5000)
-    return () => clearInterval(t)
+    const u = setInterval(() => api('/api/tunnel').then(setTunnel).catch(() => {}), 2500)
+    return () => { clearInterval(t); clearInterval(u) }
   }, [])
   const publicUrl: string | null = onTunnel ? location.origin : lan?.public || tunnel?.url || null
   const lanBase: string = lan?.secure || lan?.base || location.origin
@@ -38,9 +39,10 @@ export default function Connect() {
     try {
       const s = await post(on ? '/api/tunnel/start' : '/api/tunnel/stop')
       setTunnel(s); setLan(await api('/api/lan'))
-      if (on && !s.url) setErr(s.error || 'The internet link did not start.')
+      if (on && !s.url && !s.keeping) setErr(s.error || 'The internet link did not start.')
     } catch (e: any) { setErr(`Could not reach the server (${e.message}).`) } finally { setBusy(false) }
   }
+  const trying = !!tunnel?.keeping && !publicUrl
   const copy = (u: string) => { navigator.clipboard?.writeText(u).then(() => { setCopied(u); setTimeout(() => setCopied(null), 1500) }).catch(() => {}) }
 
   return (
@@ -86,14 +88,17 @@ export default function Connect() {
           <div className="surface p-4 flex flex-wrap items-center gap-x-5 gap-y-3" data-testid="internet-link">
             <Globe size={22} className="text-field-700 shrink-0" />
             <div className="flex-1 min-w-[260px]">
-              {publicUrl ? <><div className="font-semibold flex items-center gap-2">Internet link is on <Mic size={15} className="text-field-700" /><span className="text-[13px] font-normal text-muted">microphone works on phones</span></div>
+              {publicUrl ? <><div className="font-semibold flex items-center gap-2">Internet link is on{tunnel?.provider && <span className="text-[13px] font-normal text-muted">via {tunnel.provider}{tunnel.fixed ? ', fixed address' : ', temporary address'}</span>}<Mic size={15} className="text-field-700" /></div>
                 <button onClick={() => copy(publicUrl)} className="text-[14px] text-field-700 break-all text-left inline-flex items-center gap-1.5">{publicUrl}{copied === publicUrl ? <Check size={14} /> : <Copy size={14} />}</button>
-                <div className="text-[12.5px] text-muted">Works from any network, including mobile data. It is a random address that stops when the server stops. Anyone with it can open the demo, so share it only with the team and judges.</div></>
-                : <><div className="font-semibold">Let phones join from any network</div><div className="text-[13.5px] text-muted">Optional. Creates a free, temporary https link through Cloudflare, so phones can use their own mobile data. It depends on Cloudflare answering, which some Wi-Fi networks make slow; a phone hotspot (Same Wi-Fi tab) needs nothing outside.{tunnel && !tunnel.available && ' Needs cloudflared on the server computer: brew install cloudflared (Mac).'}</div></>}
+                <div className="text-[12.5px] text-muted">Works from any network, including mobile data, and the microphone works. {tunnel?.fixed ? 'This address stays the same every time.' : 'It is a random address: if the link has to restart, phones must scan again.'} Anyone with it can open the demo, so share it only with the team and judges. It is kept alive in the background.</div></>
+                : trying ? <><div className="font-semibold flex items-center gap-2"><Spinner />{tunnel.phase || 'Setting up the internet link'}</div>
+                <div className="text-[13.5px] text-muted">Keeps trying by itself{tunnel.attempts ? ` (${tunnel.attempts} ${tunnel.attempts === 1 ? 'attempt' : 'attempts'} so far)` : ''}. The QR codes switch over the moment it is up. Meanwhile the phone hotspot works.</div>
+                {tunnel.error && <div className="text-[12.5px] text-warn mt-1">{tunnel.error}</div>}</>
+                : <><div className="font-semibold">Let phones join from any network</div><div className="text-[13.5px] text-muted">Optional. Makes a free https link so phones can use their own mobile data. Tools are tried in turn: ngrok (fixed address, free account; see README), then Cloudflare, then localhost.run. A phone hotspot (Same Wi-Fi tab) needs nothing outside.{tunnel && !tunnel.available && ' No tunnel tool found on the server computer: brew install cloudflared (Mac).'}</div></>}
             </div>
-            {!onTunnel && (publicUrl
-              ? <button onClick={() => toggle(false)} disabled={busy} className="btn btn-quiet text-sm">{busy && <Spinner />}Turn off</button>
-              : <button onClick={() => toggle(true)} disabled={busy || (tunnel && !tunnel.available)} className="btn btn-primary text-sm" data-testid="tunnel-on">{busy ? <><Spinner />Starting, up to a minute</> : 'Turn on internet link'}</button>)}
+            {!onTunnel && (publicUrl || trying
+              ? <button onClick={() => toggle(false)} disabled={busy} className="btn btn-quiet text-sm">{busy && <Spinner />}{publicUrl ? 'Turn off' : 'Stop trying'}</button>
+              : <button onClick={() => toggle(true)} disabled={busy || (tunnel && !tunnel.available)} className="btn btn-primary text-sm" data-testid="tunnel-on">{busy ? <><Spinner />Starting</> : 'Turn on internet link'}</button>)}
             {err && <div className="w-full"><ErrorNote error={err} /></div>}
           </div>
         )}

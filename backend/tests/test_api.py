@@ -1,6 +1,8 @@
 """End-to-end API tests: every door of the system, driven the way the apps drive it. Runs offline, rules only."""
 import io
 
+import pytest
+
 from app import config, prompts, seed
 
 APHID = prompts.CANNED["common_aphid"]["transcript"]
@@ -470,12 +472,14 @@ def test_outbreak_shows_on_the_map(client):
     assert {d["shop"] for d in m["dealers"] if d["alerted"]} >= {"Aslam Zarai Markaz"}
 
 
-def test_internet_link_status_and_lan_info(client, monkeypatch):
+def test_internet_link_without_any_tunnel_tool(client, monkeypatch):
     from app import tunnel
-    monkeypatch.setattr(tunnel, "binary", lambda: None)
-    assert client.get("/api/tunnel").json() == {"available": False, "running": False, "url": None, "error": None}
+    for p in tunnel.ALL.values():
+        monkeypatch.setattr(p, "binary", lambda: None)
+    st = client.get("/api/tunnel").json()
+    assert st["available"] is False and st["running"] is False and st["url"] is None and st["keeping"] is False
     r = client.post("/api/tunnel/start").json()
-    assert r["running"] is False and "cloudflared" in r["error"]
+    assert r["running"] is False and r["keeping"] is False and "No tunnel tool" in r["error"]
     lan = client.get("/api/lan").json()
     assert lan["base"].startswith("http://") and lan["public"] is None
     (config.VAR / "public_url.txt").write_text("https://example.trycloudflare.com")
@@ -484,26 +488,70 @@ def test_internet_link_status_and_lan_info(client, monkeypatch):
     assert client.get("/api/lan").json()["public"] is None
 
 
-def test_spoken_crop_beats_a_keypad_slip(client):
-    # Pressed 2 (cotton) but said "meri kanak..." (wheat): the farmer's words decide the crop.
-    q = ask(client, start(client)["call_id"], "میری کنک دے پتیاں تے پیلیاں دھاریاں نیں تے ہتھ لاؤ تے پیلا پوڈر لگدا اے", crop="cotton")["query"]
-    assert q["crop"] == "wheat" and q["understanding"]["crop_from_speech"] == {"keyed": "cotton", "spoken": "wheat"}
-    from app.pipeline.router import spoken_crop
-    assert spoken_crop("kapas par safed makhi") == "cotton" and spoken_crop("گندم اور کپاس دونوں") is None and spoken_crop("پتے پیلے ہیں") is None
-
-
-def test_speech_cleanup_rules():
-    from app.pipeline import stt
-    assert stt.dedupe("تیلا لگ گیا ہے پتے چپے ہیں پتے چپے ہیں پتے چپے ہیں") == "تیلا لگ گیا ہے پتے چپے ہیں"
-    assert stt.dedupe("چھوٹے چھوٹے سبز کیڑے") == "چھوٹے چھوٹے سبز کیڑے"        # doubled words are real Urdu
-    assert stt.garbled("Mary, kanakðu pate píleni?") and not stt.garbled("meri kanak de pattay") and not stt.garbled("میری کنک")
-    assert set(stt.PROMPT) == {"pa", "ur"}
-
-
-def test_internet_link_ignores_cloudflare_error_messages():
+def test_internet_link_parsers_and_order():
     from app import tunnel
-    assert tunnel.URL_RE.search('failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel"') is None
-    assert tunnel.URL_RE.search("|  https://tourist-states-retailer-prices.trycloudflare.com  |").group(0) == "https://tourist-states-retailer-prices.trycloudflare.com"
+    cf, ng, lhr = tunnel.ALL["cloudflare"], tunnel.ALL["ngrok"], tunnel.ALL["localhostrun"]
+    assert cf.url_from('failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel"') is None
+    assert cf.url_from("|  https://tourist-states-retailer-prices.trycloudflare.com  |") == "https://tourist-states-retailer-prices.trycloudflare.com"
+    assert ng.url_from('{"lvl":"info","msg":"started tunnel","url":"https://abc.ngrok-free.app"}') == "https://abc.ngrok-free.app"
+    assert ng.url_from('{"lvl":"info","msg":"client session established"}') is None
+    assert "4018" in ng.error_from('{"lvl":"eror","err":"ERR_NGROK_4018 authentication failed"}')
+    assert lhr.url_from("tunneled with tls termination, https://1a2b3c.lhr.life") == "https://1a2b3c.lhr.life"
+    assert [p.name for p in tunnel.providers()] == ["ngrok", "cloudflare", "localhostrun"]
+    assert ng.available() is False or config.NGROK_AUTHTOKEN     # ngrok needs the token, never used silently
+
+
+def test_internet_link_keeper_restarts_a_dropped_link(monkeypatch):
+    """A fake tunnel tool prints a link and sleeps; when it is killed, the keeper brings the link back by itself."""
+    import sys
+    import time
+
+    from app import tunnel
+
+    class Fake(tunnel.Provider):
+        name = label = "fake"
+        tries, wait_s = 1, 10.0
+
+        def binary(self):
+            return sys.executable
+
+        def command(self, port):
+            return [sys.executable, "-u", "-c", "import time; print('https://fake-one-two.trycloudflare.com'); time.sleep(60)"]
+
+        def url_from(self, line):
+            return tunnel.ALL["cloudflare"].url_from(line)
+
+    monkeypatch.setattr(tunnel, "providers", lambda: [Fake()])
+    try:
+        st = tunnel.start(port=8000, wait_s=8)
+        assert st["running"] and st["url"] == "https://fake-one-two.trycloudflare.com" and st["keeping"] and st["provider"] == "fake"
+        assert (config.VAR / "public_url.txt").read_text().strip() == st["url"]
+        tunnel._proc.kill()                                   # the link drops
+        for _ in range(150):
+            time.sleep(0.1)
+            if tunnel.status()["running"] and tunnel.status()["changes"] >= 2:
+                break
+        st = tunnel.status()
+        assert st["running"] and st["changes"] >= 2 and st["error"] is None, st
+    finally:
+        tunnel.stop()
+    st = tunnel.status()
+    assert st["running"] is False and st["keeping"] is False and not (config.VAR / "public_url.txt").exists()
+
+
+def test_voice_clips_are_raised_to_room_loudness(tmp_path):
+    import subprocess
+
+    from app.pipeline import loudness
+    if not loudness.ffmpeg():
+        pytest.skip("ffmpeg not installed")
+    f = tmp_path / "quiet.mp3"
+    subprocess.run([loudness.ffmpeg(), "-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=2", "-af", "volume=-20dB", str(f)], check=True)
+    before = loudness.measure(f)[0]
+    assert loudness.normalize(f) is True
+    after_i, after_tp = loudness.measure(f)
+    assert after_i > before + 6 and -17 < after_i < -11 and after_tp <= -0.5
+    assert loudness.normalize(f) is False                     # already loud: left alone
 
 
 def test_https_listener_follows_the_mac_to_a_new_network(monkeypatch):

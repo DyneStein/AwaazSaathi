@@ -79,6 +79,8 @@ def speak(text: str) -> str | None:
         try:
             fn(text, out)
             if out.exists() and out.stat().st_size > 2000:
+                from . import loudness
+                loudness.normalize(out)   # loud enough for a phone speaker in a room
                 state.mark("tts", True, label, int((time.time() - t0) * 1000))
                 return cached_url(text)
         except Exception as e:  # noqa: BLE001

@@ -28,10 +28,25 @@ const buffers = new Map<string, Promise<AudioBuffer>>()
 const listeners = new Set<(blocked: boolean) => void>()
 const setBlocked = (b: boolean) => listeners.forEach((f) => f(b))
 
+/* Loud enough for a room: every clip goes through a compressor (evens out quiet syllables) and a gain above 1.
+ * The clips themselves are normalised on the server; this adds the last few dB a phone speaker needs. */
+const BOOST = 1.6
+let out: GainNode | null = null
 function context(): AudioContext | null {
   try { ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)() } catch { ctx = null }
   return ctx
 }
+function output(c: AudioContext): AudioNode {
+  if (out) return out
+  const comp = c.createDynamicsCompressor()
+  comp.threshold.value = -22; comp.knee.value = 12; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.25
+  out = c.createGain(); out.gain.value = BOOST
+  comp.connect(out).connect(c.destination)
+  // the compressor is the entry point: callers connect to it, the gain feeds the speaker
+  ;(out as any)._entry = comp
+  return out
+}
+const entry = (c: AudioContext): AudioNode => ((output(c) as any)._entry as AudioNode)
 
 /** Call inside a tap or key press. Wakes the audio engine and plays any clip that was waiting for a tap. */
 export function unlockAudio() {
@@ -99,7 +114,7 @@ async function play(url: string, text: string, my: number): Promise<void> {
       if (c.state !== 'running') await Promise.race([c.resume(), new Promise((r) => setTimeout(r, 400))])
       if (c.state === 'running') {
         return await new Promise<void>((resolve) => {
-          const s = c.createBufferSource(); s.buffer = buf; s.connect(c.destination)
+          const s = c.createBufferSource(); s.buffer = buf; s.connect(entry(c))
           s.onended = () => { if (source === s) source = null; resolve() }
           source = s; s.start(0); played()
         })
@@ -137,7 +152,7 @@ export function beep(freq = 880, ms = 180, times = 1) {
       const o = c.createOscillator(); const g = c.createGain()
       o.frequency.value = freq; o.type = 'sine'
       g.gain.setValueAtTime(0.0001, c.currentTime + i * (ms + 90) / 1000)
-      g.gain.exponentialRampToValueAtTime(0.3, c.currentTime + i * (ms + 90) / 1000 + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.8, c.currentTime + i * (ms + 90) / 1000 + 0.02)
       g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + (i * (ms + 90) + ms) / 1000)
       o.connect(g).connect(c.destination)
       o.start(c.currentTime + i * (ms + 90) / 1000); o.stop(c.currentTime + (i * (ms + 90) + ms) / 1000 + 0.05)

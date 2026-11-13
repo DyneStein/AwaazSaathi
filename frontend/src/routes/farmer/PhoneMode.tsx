@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, ChevronRight, Mic, MicOff, MonitorSmartphone, Send, Settings, Smartphone, Grid3x3, Captions } from 'lucide-react'
+import { Check, ChevronRight, Mic, MicOff, MonitorSmartphone, Send, Settings, Smartphone, Grid3x3, Captions, Phone, PhoneOff } from 'lucide-react'
 import { KeypadPhone, type Lcd, type PhoneKey } from '../../components/KeypadPhone'
 import { LiveDot, Logo, Segmented, Sheet } from '../../components/ui'
 import type { Lang } from './Chat'
@@ -174,4 +174,48 @@ export function KeypadScreen({ lcd, onKey, ringing, clock, connected, onSettings
       </Sheet></div>}
     </div>
   )
+}
+
+/** Keeps the phone's screen on while the farmer app is open, so a callback is never missed because the phone locked. */
+export function useKeepAwake(on: boolean) {
+  useEffect(() => {
+    if (!on) return
+    let lock: any = null
+    const get = async () => { try { lock = await (navigator as any).wakeLock?.request('screen') } catch { /* not supported or not allowed yet */ } }
+    const onVis = () => { if (document.visibilityState === 'visible') get() }
+    get()
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('pointerdown', get, { capture: true })   // some browsers allow it only after a tap
+    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pointerdown', get, { capture: true }); lock?.release?.() }
+  }, [on])
+}
+
+const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+
+/** The smartphone receiving a voice call from the helpline: the agronomist's answer or the 3-day follow-up. */
+export function CallOverlay({ aux, secs, onAnswer, onEnd, onChoice }: {
+  aux: { kind: string; stage: string; data: any } | null; secs: number; onAnswer: () => void; onEnd: () => void; onChoice: (better: boolean) => void
+}) {
+  if (!aux || aux.kind === 'message') return null
+  const ringing = aux.stage === 'ringing'
+  const line = ringing ? 'Incoming call' : aux.stage === 'done' ? 'Call ended' : aux.stage === 'choose' ? 'Press 1 if the crop is better, 2 if the problem is still there' : `In call, ${mmss(secs)}`
+  return (
+    <div className="absolute inset-0 z-40 bg-field-950 text-white flex flex-col items-center justify-between py-12 px-6" dir="ltr" data-testid="call-overlay">
+      <div className="text-center">
+        <div className={`mx-auto h-24 w-24 rounded-full bg-field-800 grid place-items-center ${ringing ? 'ring-pulse' : ''}`}><Phone size={38} /></div>
+        <div className="mt-4 text-xl font-bold">AwaazSaathi</div>
+        <div className="text-field-200">0800 29229</div>
+        <div className="mt-2 text-[14px] text-field-200">{line}</div>
+      </div>
+      {aux.stage === 'playing' && <div className="urdu text-[17px] !leading-[2] text-center px-2 max-h-[40%] overflow-y-auto" dir="rtl">{aux.data?.text}</div>}
+      <div className="flex justify-center gap-12">
+        {ringing ? <>
+          <button onClick={onEnd} aria-label="Decline" className="h-16 w-16 rounded-full bg-danger grid place-items-center"><PhoneOff /></button>
+          <button onClick={onAnswer} aria-label="Answer" className="h-16 w-16 rounded-full bg-field-600 grid place-items-center ring-pulse"><Phone /></button>
+        </> : aux.stage === 'choose' ? <>
+          <button onClick={() => onChoice(true)} className="h-16 w-16 rounded-full bg-white text-ink text-2xl font-bold">1</button>
+          <button onClick={() => onChoice(false)} className="h-16 w-16 rounded-full bg-white text-ink text-2xl font-bold">2</button>
+        </> : aux.stage !== 'done' && <button onClick={onEnd} aria-label="End call" className="h-16 w-16 rounded-full bg-danger grid place-items-center"><PhoneOff /></button>}
+      </div>
+    </div>)
 }
