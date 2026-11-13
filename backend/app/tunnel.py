@@ -576,3 +576,18 @@ def stop() -> dict:
     _keep, _phase, _error = False, "", None
     _kill()
     return status()
+
+
+def _cleanup_at_exit() -> None:
+    """Safety net: whatever way the server ends, no tunnel tool keeps running on its own."""
+    for c in list(_candidates) + ([_proc] if _proc is not None else []):
+        try:
+            if c.poll() is None:
+                c.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+import atexit  # noqa: E402
+
+atexit.register(_cleanup_at_exit)

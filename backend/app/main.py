@@ -76,14 +76,14 @@ async def lifespan(_app):
     if os.getenv("AWAAZ_ONLINE") == "1":   # ./scripts/start.sh --online: get the internet link without pressing anything
         tunnel.start(wait_s=0)
     yield
+    tunnel.stop()          # first: an internet link must never outlive the server
     task.cancel()
     if secure:
         secure.cancel()
         try:
             await asyncio.wait_for(secure, 5)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except BaseException:  # noqa: BLE001 - shutting down either way
             pass
-    tunnel.stop()
     hub.loop = None
 
 
