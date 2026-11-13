@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Captions, Keyboard, Mic, MicOff, Send, SlidersHorizontal } from 'lucide-react'
 import { api, post } from '../lib/api'
 import { askMicPermission, beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
-import { useWS } from '../lib/ws'
+import { usePollWhenOffline, useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
 import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../components/ui'
 import { KeypadPhone, type Lcd, type PhoneKey } from '../components/KeypadPhone'
@@ -117,6 +117,7 @@ export default function Farmer() {
   const video = useVideoCall(ws.send, myTopic)
 
   // A call that arrived while the phone was asleep or offline rings as soon as the phone is back (phone mode only).
+  usePollWhenOffline(ws.connected || !farmerId, () => { recheck.current = true; loadInbox() })
   const recheck = useRef(false)
   const rang = useRef<Set<number>>(new Set())
   const wasConnected = useRef(false)

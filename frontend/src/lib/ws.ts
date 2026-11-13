@@ -30,3 +30,14 @@ export function useWS(topics: string[], onMsg: (m: WSMsg) => void) {
   }, [])
   return { connected, send }
 }
+
+/** While live updates are down (a network or tunnel that blocks WebSockets), refresh every few seconds instead. */
+export function usePollWhenOffline(connected: boolean, refresh: () => void, everyMs = 4000) {
+  const fn = useRef(refresh)
+  fn.current = refresh
+  useEffect(() => {
+    if (connected) return
+    const t = window.setInterval(() => fn.current(), everyMs)
+    return () => clearInterval(t)
+  }, [connected, everyMs])
+}

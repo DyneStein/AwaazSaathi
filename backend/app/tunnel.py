@@ -23,8 +23,26 @@ from . import config
 
 CF_RE = re.compile(r"https://(?!api\.)[a-z0-9]+(?:-[a-z0-9]+)+\.trycloudflare\.com")   # api.trycloudflare.com = error text
 NGROK_RE = re.compile(r"https://[a-z0-9.-]+\.ngrok(?:-free)?\.(?:app|dev|io)")
-LHR_RE = re.compile(r"https://[a-z0-9.-]+\.(?:lhr\.life|localhost\.run)")
+# localhost.run gives <id>.lhr.life; its own pages (admin.localhost.run, sign-in) appear in the banner and are not links.
+LHR_RE = re.compile(r"https://[a-z0-9-]+\.lhr\.life")
 RETRY_EVERY_S = 30
+VERIFY_S = 30      # how long a new link may take to start answering before it is rejected
+
+
+def verify(url: str, budget_s: float = VERIFY_S) -> bool:
+    """The link goes into the QR codes only after it really reaches this server (not a sign-in or error page)."""
+    import httpx
+    end = time.time() + budget_s
+    while time.time() < end:
+        try:
+            r = httpx.get(url.rstrip("/") + "/api/health", timeout=6, follow_redirects=False,
+                          headers={"ngrok-skip-browser-warning": "1"})
+            if r.status_code == 200 and r.json().get("app") == "awaazsaathi":
+                return True
+        except Exception:  # noqa: BLE001 - not reachable yet (DNS still spreading, tunnel warming up)
+            pass
+        time.sleep(2)
+    return False
 
 
 class Provider:
@@ -67,7 +85,7 @@ def _find(*names: str) -> str | None:
 
 
 class Ngrok(Provider):
-    name, label, fixed, tries, wait_s = "ngrok", "ngrok", True, 2, 25.0
+    name, label, fixed, tries, wait_s = "ngrok", "ngrok", True, 2, 25.0 + VERIFY_S
 
     def binary(self):
         return _find("ngrok")
@@ -106,7 +124,7 @@ class Ngrok(Provider):
 
 
 class Cloudflare(Provider):
-    name, label, tries, wait_s = "cloudflare", "Cloudflare", 3, 35.0
+    name, label, tries, wait_s = "cloudflare", "Cloudflare", 3, 35.0 + VERIFY_S
 
     def binary(self):
         return _find("cloudflared")
@@ -125,7 +143,7 @@ class Cloudflare(Provider):
 
 class LocalhostRun(Provider):
     """ssh -R through localhost.run. Not exercised in this repo's own tests; it is the last fallback."""
-    name, label, tries, wait_s = "localhostrun", "localhost.run", 1, 30.0
+    name, label, tries, wait_s = "localhostrun", "localhost.run", 1, 30.0 + VERIFY_S
 
     def binary(self):
         return _find("ssh")
@@ -163,6 +181,11 @@ _phase = ""
 _attempts = 0
 _started_at = 0.0
 _changes = 0
+_rejected: set[str] = set()
+_misses = 0
+_checked = 0.0
+_gen = 0          # each start() gets a new keeper; an older keeper sees the change and exits
+CHECK_EVERY_S = 30
 NO_TOOL = "No tunnel tool is installed. Mac: brew install cloudflared (or ngrok). The phone hotspot needs nothing."
 
 
@@ -180,7 +203,7 @@ def status() -> dict:
     return {"available": bool(avail), "providers": avail, "running": on, "url": _url if on else None,
             "provider": _provider.label if on and _provider else None, "fixed": bool(on and _provider and _provider.fixed),
             "keeping": _keep, "phase": _phase if _keep and not on else "", "attempts": _attempts, "error": _error,
-            "since": _started_at if on else None, "changes": _changes}
+            "since": _started_at if on else None, "changes": _changes, "rejected": sorted(_rejected)[-3:]}
 
 
 def public_url() -> str | None:
@@ -209,7 +232,13 @@ def _reader(p: subprocess.Popen, prov: Provider) -> None:
         if err:
             _last = err
         u = prov.url_from(line)
-        if u and not _url and p is _proc:
+        if u and u != _url and p is _proc and u not in _rejected:
+            if not verify(u):
+                _rejected.add(u)
+                _last = f"{u} did not reach AwaazSaathi, ignored"
+                continue
+            if p is not _proc:
+                return
             _url, _started_at, _error, _phase = u, time.time(), None, ""
             _changes += 1
             try:
@@ -222,6 +251,7 @@ def _reader(p: subprocess.Popen, prov: Provider) -> None:
 def _launch(prov: Provider, port: int) -> None:
     global _proc, _url, _last, _provider
     _url, _last, _provider = None, "", prov
+    _rejected.clear()   # per attempt: a fixed address that failed once may well work on the next try
     flags = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
     env = {**os.environ, **prov.env()}
     _proc = subprocess.Popen(prov.command(port), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
@@ -248,27 +278,29 @@ def _kill() -> None:
         _notify()
 
 
-def _attempt_all(port: int) -> bool:
-    """One pass over every available provider with its retries. True when a link is up."""
+def _attempt_all(port: int, gen: int) -> bool:
+    """Tries every available tool once per round (up to each tool's tries), so one failing tool never holds up
+    the next. True when a verified link is up."""
     global _error, _phase, _attempts
     avail = [p for p in providers() if p.available()]
     if not avail:
         _error = NO_TOOL
         return False
-    for prov in avail:
-        for attempt in range(1, prov.tries + 1):
-            if not _keep:
+    for rnd in range(max(p.tries for p in avail)):
+        for prov in [p for p in avail if rnd < p.tries]:
+            if not _keep or gen != _gen:
                 return False
             _attempts += 1
-            _phase = f"Trying {prov.label}, attempt {attempt} of {prov.tries}"
+            _phase = f"Trying {prov.label}" + (f", round {rnd + 1}" if rnd else "")
             _notify()
             with _lock:
                 _launch(prov, port)
             end = time.time() + prov.wait_s
-            while time.time() < end and running() and not _url and _keep:
+            while time.time() < end and running() and not _url and _keep and gen == _gen:
                 time.sleep(0.3)
+            if gen != _gen:
+                return False
             if _url:
-                # It came up. If it already dropped again, the keeper replaces it at once instead of waiting.
                 _error = None
                 _phase = ""
                 return True
@@ -277,39 +309,50 @@ def _attempt_all(port: int) -> bool:
     return False
 
 
-def _keeper(port: int) -> None:
-    global _phase, _error
-    while _keep:
+def _keeper(port: int, gen: int) -> None:
+    global _phase, _error, _misses, _checked
+    while _keep and gen == _gen:
         if not running():
             if _url is not None:
                 _error = "The link dropped and is being replaced."
                 _kill()
-            if not _attempt_all(port):
+            if not _attempt_all(port, gen):
                 # Nothing worked: say so, wait, and try again. Phones can use the hotspot meanwhile.
                 _phase = f"No link yet. Trying again in {RETRY_EVERY_S} s."
                 _notify()
                 for _ in range(RETRY_EVERY_S * 2):
-                    if not _keep:
+                    if not _keep or gen != _gen:
                         break
                     time.sleep(0.5)
                 continue
+        # Health check: a tunnel can stay "running" while no traffic gets through.
+        if _url and running() and time.time() - _checked > CHECK_EVERY_S:
+            _checked = time.time()
+            _misses = 0 if verify(_url, budget_s=8) else _misses + 1
+            if _misses >= 3:
+                _error = "The link stopped answering and is being replaced."
+                _misses = 0
+                _notify()
+                _kill()
+                continue
         time.sleep(0.5)
-    _kill()
+    if gen == _gen:
+        _kill()
 
 
 def start(port: int | None = None, wait_s: float = 3.0) -> dict:
     """Asks for a link and returns quickly; the keeper thread does the work and the page polls status()."""
-    global _keep, _thread, _error, _attempts, _phase
+    global _keep, _thread, _error, _attempts, _phase, _gen, _misses, _checked
     port = port or int(os.getenv("AWAAZ_PORT", "8000"))
     if running() and _url:
         return status()
     if not any(p.available() for p in providers()):
         _error = NO_TOOL
         return status()
-    _keep, _error, _attempts, _phase = True, None, 0, "Starting"
-    if _thread is None or not _thread.is_alive():
-        _thread = threading.Thread(target=_keeper, args=(port,), daemon=True)
-        _thread.start()
+    _gen += 1
+    _keep, _error, _attempts, _phase, _misses, _checked = True, None, 0, "Starting", 0, 0.0
+    _thread = threading.Thread(target=_keeper, args=(port, _gen), daemon=True)
+    _thread.start()
     end = time.time() + wait_s   # a short wait so a fast link is reported in the same request
     while time.time() < end and not (running() and _url):
         time.sleep(0.2)
@@ -317,7 +360,8 @@ def start(port: int | None = None, wait_s: float = 3.0) -> dict:
 
 
 def stop() -> dict:
-    global _keep, _phase, _error
+    global _keep, _phase, _error, _gen
+    _gen += 1
     _keep, _phase, _error = False, "", None
     _kill()
     return status()

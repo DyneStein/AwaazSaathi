@@ -497,6 +497,7 @@ def test_internet_link_parsers_and_order():
     assert ng.url_from('{"lvl":"info","msg":"client session established"}') is None
     assert "4018" in ng.error_from('{"lvl":"eror","err":"ERR_NGROK_4018 authentication failed"}')
     assert lhr.url_from("tunneled with tls termination, https://1a2b3c.lhr.life") == "https://1a2b3c.lhr.life"
+    assert lhr.url_from("manage your account at https://admin.localhost.run/") is None      # its sign-in page, not a link
     assert [p.name for p in tunnel.providers()] == ["ngrok", "cloudflare", "localhostrun"]
     assert ng.available() is False or config.NGROK_AUTHTOKEN     # ngrok needs the token, never used silently
 
@@ -522,6 +523,7 @@ def test_internet_link_keeper_restarts_a_dropped_link(monkeypatch):
             return tunnel.ALL["cloudflare"].url_from(line)
 
     monkeypatch.setattr(tunnel, "providers", lambda: [Fake()])
+    monkeypatch.setattr(tunnel, "verify", lambda u, budget_s=0: True)
     try:
         st = tunnel.start(port=8000, wait_s=8)
         assert st["running"] and st["url"] == "https://fake-one-two.trycloudflare.com" and st["keeping"] and st["provider"] == "fake"
@@ -585,3 +587,76 @@ def test_https_listener_follows_the_mac_to_a_new_network(monkeypatch):
             pass
     asyncio.run(run())
     assert served == ["192.168.1.5", "172.20.10.3"]
+
+
+def test_internet_link_that_does_not_reach_the_app_is_never_shown(monkeypatch):
+    """A tool prints a wrong address first (a sign-in page), then the real one: only the real one is used."""
+    import sys
+
+    from app import tunnel
+
+    class Noisy(tunnel.Provider):
+        name = label = "noisy"
+        tries, wait_s = 1, 10.0
+
+        def binary(self):
+            return sys.executable
+
+        def command(self, port):
+            return [sys.executable, "-u", "-c", "import time; print('https://signin-page-here.trycloudflare.com'); print('https://real-link-here.trycloudflare.com'); time.sleep(60)"]
+
+        def url_from(self, line):
+            return tunnel.ALL["cloudflare"].url_from(line)
+
+    monkeypatch.setattr(tunnel, "providers", lambda: [Noisy()])
+    monkeypatch.setattr(tunnel, "verify", lambda u, budget_s=0: "real-link" in u)
+    tunnel._rejected.clear()
+    try:
+        st = tunnel.start(port=8000, wait_s=8)
+        assert st["running"] and st["url"] == "https://real-link-here.trycloudflare.com"
+    finally:
+        tunnel.stop()
+
+
+def test_internet_link_is_replaced_when_it_stops_answering(monkeypatch):
+    """The tunnel process keeps running but traffic stops: after three failed checks the link is replaced."""
+    import sys
+    import time
+
+    from app import tunnel
+
+    class Fake(tunnel.Provider):
+        name = label = "fake"
+        tries, wait_s = 1, 10.0
+
+        def binary(self):
+            return sys.executable
+
+        def command(self, port):
+            return [sys.executable, "-u", "-c", "import time; print('https://quiet-link-here.trycloudflare.com'); time.sleep(60)"]
+
+        def url_from(self, line):
+            return tunnel.ALL["cloudflare"].url_from(line)
+
+    healthy = [True]
+    monkeypatch.setattr(tunnel, "providers", lambda: [Fake()])
+    # New links always check out; only the periodic health check (8 s budget) sees the outage.
+    monkeypatch.setattr(tunnel, "verify", lambda u, budget_s=tunnel.VERIFY_S: healthy[0] or budget_s != 8)
+    monkeypatch.setattr(tunnel, "CHECK_EVERY_S", 0.05)
+    try:
+        assert tunnel.start(port=8000, wait_s=8)["running"]
+        first = tunnel._proc
+        healthy[0] = False                       # traffic stops
+        for _ in range(100):
+            time.sleep(0.1)
+            if tunnel._proc is not first:
+                break
+        assert tunnel._proc is not first         # the dead link was killed and replaced
+        healthy[0] = True
+        for _ in range(100):
+            time.sleep(0.1)
+            if tunnel.status()["running"]:
+                break
+        assert tunnel.status()["running"]
+    finally:
+        tunnel.stop()

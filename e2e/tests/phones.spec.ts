@@ -158,7 +158,7 @@ test.describe('operations map and connect page', () => {
     for (const [role, path] of [['farmer', '/farmer?device=phone'], ['expert', '/expert'], ['dealer', '/dealer']]) {
       const img = page.getByTestId(`qr-${role}`).locator('img')
       await expect(img).toHaveAttribute('src', new RegExp(encodeURIComponent(path).replace(/[?]/g, '\\?')))
-      expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0)
+      await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0)   // wait for the image to load
     }
     await expect(page.getByTestId('hotspot-note')).toContainText('phone hotspot')
     await page.getByRole('tab', { name: /Any network/ }).click()

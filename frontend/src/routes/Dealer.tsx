@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, BarChart3, Store, CloudSun, Check, BellRing, LogOut, MapPin, Users, House, ChevronRight, Square, SquareCheck, Volume2, ShieldCheck, Droplets } from 'lucide-react'
 import { api, post, timeAgo } from '../lib/api'
 import { beep, unlockAudio } from '../lib/audio'
-import { useWS } from '../lib/ws'
+import { usePollWhenOffline, useWS } from '../lib/ws'
 import { AppBar, AppShell, Empty, ErrorNote, LiveDot, Segmented, Spinner, Stat } from '../components/ui'
 
 export default function Dealer() {
@@ -35,6 +35,7 @@ export default function Dealer() {
     }
     if (m.event === 'reset') setBanner(null)
   })
+  usePollWhenOffline(ws.connected || !me, load)
   const arm = () => { unlockAudio(); beep(660, 120); try { navigator.vibrate?.(80) } catch { /* ignore */ } try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission() } catch { /* ignore */ } setArmed(true) }
 
   if (!me) return <Login onLogin={(d) => { setMe(d); localStorage.setItem('dealer', JSON.stringify(d)); setTab('home') }} />

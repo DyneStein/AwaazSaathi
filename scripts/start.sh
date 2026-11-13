@@ -31,4 +31,6 @@ echo ""
 (for i in $(seq 1 40); do curl -s localhost:8000/api/health >/dev/null && break; sleep 1; done
  [ "$ONLINE" = 1 ] && echo "  The internet link is being set up in the background: see the Connect page."
  open "http://localhost:8000/connect" "http://localhost:8000/admin" "http://localhost:8000/farmer" "http://localhost:8000/expert") &
+# Keep the Mac awake (screen may dim) for as long as the server runs: a sleeping Mac drops every phone and the internet link.
+command -v caffeinate >/dev/null && (caffeinate -ims -w $$ &)
 exec uv run uvicorn app.main:app --host 0.0.0.0 --port 8000

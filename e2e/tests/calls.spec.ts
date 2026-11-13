@@ -123,3 +123,16 @@ test('a video call to a farmer on a button phone is shown with a note, and can b
   await farmer.getByRole('button', { name: 'Decline' }).click()
   await expect(expert.getByText('Call ended')).toBeVisible()
 })
+
+test('with live updates blocked on the farmer phone, the answer still rings within seconds', async ({ browser }) => {
+  test.setTimeout(120_000)
+  const ctx = await browser.newContext({ ...devices['Pixel 7'], permissions: ['microphone', 'camera'] })
+  await ctx.routeWebSocket(/\/ws/, (ws) => ws.close())          // a network or tunnel that blocks WebSockets
+  const farmer = await ctx.newPage()
+  await setUp(farmer, 'keypad')
+  await askHardQuestion(farmer)
+  await answerAsAgronomists(await phone(browser))
+  await expect(lcd(farmer)).toContainText('Incoming call', { timeout: 20_000 })
+  await farmer.keyboard.press('Enter')
+  await expect(screen(farmer)).toContainText('approved by the agronomist')
+})

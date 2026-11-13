@@ -3,7 +3,7 @@ import { diffWords } from 'diff'
 import { ListChecks, CheckCircle2, UserRound, Clock, Video, Mic, Square, Send, Check, PenLine, X, BookPlus, BookCheck, ShieldCheck, ShieldAlert, Upload, LogOut, MapPin, Wheat, Image as ImageIcon, Wallet, TrendingUp, ChevronRight, Bell, House, BookOpen, Search, BadgeCheck, Hourglass } from 'lucide-react'
 import { api, post, timeAgo, CROP_EN } from '../lib/api'
 import { beep, useRecorder } from '../lib/audio'
-import { useWS } from '../lib/ws'
+import { usePollWhenOffline, useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
 import { AppBar, AppShell, Empty, ErrorNote, LevelBadge, LiveDot, Meter, Mock, Reasons, Segmented, Sheet, Spinner, Stat, VideoCallView } from '../components/ui'
 import { sourceLabel } from '../components/Decision'
@@ -44,6 +44,7 @@ export default function Expert() {
     if (m.event === 'reset') { setSel(null); api('/api/expert/list').then(setExperts) }
   })
   const video = useVideoCall(ws.send, myTopic)
+  usePollWhenOffline(ws.connected || !me, () => { loadQueue(); loadProfile() })
   const flash = (t: string) => { setToast(t); setTimeout(() => setToast(null), 3200) }
   const login = (e: any) => { setMe(e); localStorage.setItem('expert', JSON.stringify(e)); setSel(null); setTab('home') }
   const logout = () => { setMe(null); localStorage.removeItem('expert'); setProfile(null) }
