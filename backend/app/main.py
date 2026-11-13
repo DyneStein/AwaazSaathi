@@ -17,6 +17,7 @@ from . import tls, tunnel
 from .ws import hub
 
 STATIC = config.BACKEND / "static"
+TLS_POLL_S = 4   # how often the https listener checks whether the Mac changed network
 
 
 async def _sla_loop():
@@ -29,6 +30,29 @@ async def _sla_loop():
             pass
         finally:
             db.close()
+
+
+async def _tls_loop(app):
+    """Serves https on the Mac's current Wi-Fi address. When the Mac moves to another Wi-Fi or a phone hotspot,
+    the certificate is re-issued for the new address and the listener restarts, so phones only need a refresh."""
+    try:
+        while True:
+            ip = lan_ip()
+            server = asyncio.create_task(tls.serve(app, ip))
+            while not server.done():
+                await asyncio.sleep(TLS_POLL_S)
+                if lan_ip() != ip:
+                    tls.stop()
+                    break
+            try:
+                await asyncio.wait_for(server, 8)
+            except Exception:  # noqa: BLE001 - slow shutdown or a failed listener: start over either way
+                server.cancel()
+            if tls.state["error"]:
+                await asyncio.sleep(30)   # e.g. the port is taken: try again later instead of spinning
+    except asyncio.CancelledError:
+        tls.stop()
+        raise
 
 
 @asynccontextmanager
@@ -47,15 +71,15 @@ async def lifespan(_app):
     finally:
         db.close()
     task = asyncio.create_task(_sla_loop())
-    secure = asyncio.create_task(tls.serve(_app, lan_ip())) if tls.enabled() else None
+    secure = asyncio.create_task(_tls_loop(_app)) if tls.enabled() else None
     yield
     task.cancel()
     if secure:
-        tls.stop()
+        secure.cancel()
         try:
-            await asyncio.wait_for(secure, 3)
+            await asyncio.wait_for(secure, 5)
         except (asyncio.TimeoutError, asyncio.CancelledError):
-            secure.cancel()
+            pass
     tunnel.stop()
     hub.loop = None
 

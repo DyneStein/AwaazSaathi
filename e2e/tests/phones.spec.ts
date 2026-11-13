@@ -160,6 +160,7 @@ test.describe('operations map and connect page', () => {
       await expect(img).toHaveAttribute('src', new RegExp(encodeURIComponent(path).replace(/[?]/g, '\\?')))
       expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0)
     }
+    await expect(page.getByTestId('hotspot-note')).toContainText('phone hotspot')
     await page.getByRole('tab', { name: /Any network/ }).click()
     await expect(page.getByTestId('internet-link')).toContainText(/Let phones join from any network|Internet link is on/)
   })

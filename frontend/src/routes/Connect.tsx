@@ -25,6 +25,9 @@ export default function Connect() {
   useEffect(() => {
     api('/api/lan').then((l) => { setLan(l); if (l.public) setNet('web') }).catch(() => {})
     api('/api/tunnel').then(setTunnel).catch(() => {})
+    // The Mac may move to a phone hotspot during setup: the codes follow its new address by themselves.
+    const t = setInterval(() => api('/api/lan').then((l) => setLan((old: any) => (old && old.ip === l.ip && old.secure === l.secure && old.public === l.public ? old : l))).catch(() => {}), 5000)
+    return () => clearInterval(t)
   }, [])
   const publicUrl: string | null = onTunnel ? location.origin : lan?.public || tunnel?.url || null
   const lanBase: string = lan?.secure || lan?.base || location.origin
@@ -50,33 +53,47 @@ export default function Connect() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 py-6">
-        {net === 'lan' ? (lan?.secure ? (
-          <div className="surface p-4 flex flex-wrap items-start gap-x-5 gap-y-3" data-testid="secure-link">
+        {net === 'lan' ? (<>
+          <div className="surface p-4 flex flex-wrap items-start gap-x-5 gap-y-3 border-field-200 bg-field-50" data-testid="hotspot-note">
+            <Wifi size={22} className="text-field-700 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-[260px] text-[14px]">
+              <div className="font-semibold">Anywhere, with no internet: use a phone hotspot</div>
+              <ol className="mt-1 list-decimal pl-5 space-y-0.5 text-muted">
+                <li>Turn on the hotspot on one phone.</li>
+                <li>Connect this computer and every other phone to that hotspot.</li>
+                <li>The codes below update by themselves within a few seconds. Scan them again.</li>
+              </ol>
+              <p className="text-muted mt-1">Everything runs on this computer, so the demo needs no outside service. This computer is on <span className="font-semibold text-ink">{lan?.ip || lanBase.replace(/^https?:\/\//, '').replace(/:\d+$/, '')}</span> right now.</p>
+            </div>
+          </div>
+          {lan?.secure ? (
+          <div className="surface p-4 flex flex-wrap items-start gap-x-5 gap-y-3 mt-4" data-testid="secure-link">
             <Mic size={22} className="text-field-700 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-[260px] text-[14px]">
               <div className="font-semibold">Secure Wi-Fi link: the microphone works on phones</div>
               <p className="text-muted mt-0.5">Phones must be on the same Wi-Fi or hotspot as this computer. The first time, the phone warns that the connection is not private, because the certificate was made on this computer, not bought. That is expected for this demo:</p>
               <ul className="mt-1.5 space-y-0.5"><li><b>Android (Chrome):</b> tap <b>Advanced</b>, then <b>Proceed to {lan.ip}</b>.</li><li><b>iPhone (Safari):</b> tap <b>Show Details</b>, then <b>visit this website</b>, then <b>Visit Website</b>.</li></ul>
-              <p className="text-muted mt-1.5">If the page does not open at all, this Wi-Fi keeps devices apart (common on university and office Wi-Fi). Use <button onClick={() => setNet('web')} className="font-semibold text-field-700 underline underline-offset-2">Any network</button> instead.</p>
+              <p className="text-muted mt-1.5">If the page does not open at all, this Wi-Fi keeps devices apart (common on university and office Wi-Fi). Use a phone hotspot as above.</p>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-wrap items-start gap-3 text-[14px] text-muted">
+          ) : (
+          <div className="flex flex-wrap items-start gap-3 mt-4 text-[14px] text-muted">
             <MicOff size={18} className="text-warn mt-0.5 shrink-0" />
             <p className="flex-1 min-w-[260px]">Phones must be on the same Wi-Fi or hotspot as this computer ({lanBase.replace('http://', '')}). The secure Wi-Fi link is not running, so phone browsers block the microphone here. For speaking on the phone, use <button onClick={() => setNet('web')} className="font-semibold text-field-700 underline underline-offset-2">Any network</button>.</p>
           </div>
-        )) : (
+          )}
+        </>) : (
           <div className="surface p-4 flex flex-wrap items-center gap-x-5 gap-y-3" data-testid="internet-link">
             <Globe size={22} className="text-field-700 shrink-0" />
             <div className="flex-1 min-w-[260px]">
               {publicUrl ? <><div className="font-semibold flex items-center gap-2">Internet link is on <Mic size={15} className="text-field-700" /><span className="text-[13px] font-normal text-muted">microphone works on phones</span></div>
                 <button onClick={() => copy(publicUrl)} className="text-[14px] text-field-700 break-all text-left inline-flex items-center gap-1.5">{publicUrl}{copied === publicUrl ? <Check size={14} /> : <Copy size={14} />}</button>
                 <div className="text-[12.5px] text-muted">Works from any network, including mobile data. It is a random address that stops when the server stops. Anyone with it can open the demo, so share it only with the team and judges.</div></>
-                : <><div className="font-semibold">Let phones join from any network</div><div className="text-[13.5px] text-muted">Creates a free, temporary https link through Cloudflare. Phones can then use their own mobile data, and the microphone works.{tunnel && !tunnel.available && ' Needs cloudflared on the server computer: brew install cloudflared (Mac).'}</div></>}
+                : <><div className="font-semibold">Let phones join from any network</div><div className="text-[13.5px] text-muted">Optional. Creates a free, temporary https link through Cloudflare, so phones can use their own mobile data. It depends on Cloudflare answering, which some Wi-Fi networks make slow; a phone hotspot (Same Wi-Fi tab) needs nothing outside.{tunnel && !tunnel.available && ' Needs cloudflared on the server computer: brew install cloudflared (Mac).'}</div></>}
             </div>
             {!onTunnel && (publicUrl
               ? <button onClick={() => toggle(false)} disabled={busy} className="btn btn-quiet text-sm">{busy && <Spinner />}Turn off</button>
-              : <button onClick={() => toggle(true)} disabled={busy || (tunnel && !tunnel.available)} className="btn btn-primary text-sm" data-testid="tunnel-on">{busy ? <><Spinner />Starting, up to 30 s</> : 'Turn on internet link'}</button>)}
+              : <button onClick={() => toggle(true)} disabled={busy || (tunnel && !tunnel.available)} className="btn btn-primary text-sm" data-testid="tunnel-on">{busy ? <><Spinner />Starting, up to a minute</> : 'Turn on internet link'}</button>)}
             {err && <div className="w-full"><ErrorNote error={err} /></div>}
           </div>
         )}

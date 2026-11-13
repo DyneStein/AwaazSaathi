@@ -504,3 +504,36 @@ def test_internet_link_ignores_cloudflare_error_messages():
     from app import tunnel
     assert tunnel.URL_RE.search('failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel"') is None
     assert tunnel.URL_RE.search("|  https://tourist-states-retailer-prices.trycloudflare.com  |").group(0) == "https://tourist-states-retailer-prices.trycloudflare.com"
+
+
+def test_https_listener_follows_the_mac_to_a_new_network(monkeypatch):
+    """The Mac joins a phone hotspot mid-demo: the secure listener restarts with a certificate for the new address."""
+    import asyncio
+    from app import main, tls
+    current, served, stop_flag = ["192.168.1.5"], [], [False]
+
+    async def fake_serve(_app, ip):
+        served.append(ip)
+        tls.state.update(running=True, error=None)
+        while not stop_flag[0]:
+            await asyncio.sleep(0.005)
+        stop_flag[0] = False
+        tls.state["running"] = False
+
+    monkeypatch.setattr(tls, "serve", fake_serve)
+    monkeypatch.setattr(tls, "stop", lambda: stop_flag.__setitem__(0, True))
+    monkeypatch.setattr(main, "lan_ip", lambda: current[0])
+    monkeypatch.setattr(main, "TLS_POLL_S", 0.01)
+
+    async def run():
+        loop = asyncio.create_task(main._tls_loop(None))
+        await asyncio.sleep(0.05)
+        current[0] = "172.20.10.3"          # the hotspot's address
+        await asyncio.sleep(0.15)
+        loop.cancel()
+        try:
+            await loop
+        except asyncio.CancelledError:
+            pass
+    asyncio.run(run())
+    assert served == ["192.168.1.5", "172.20.10.3"]

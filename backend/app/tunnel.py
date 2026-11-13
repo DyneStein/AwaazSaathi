@@ -67,7 +67,7 @@ def _launch(b: str, port: int) -> None:
     threading.Thread(target=_reader, args=(_proc,), daemon=True).start()
 
 
-def start(port: int | None = None, wait_s: float = 35, tries: int = 2) -> dict:
+def start(port: int | None = None, wait_s: float = 35, tries: int = 3) -> dict:
     global _error
     port = port or int(os.getenv("AWAAZ_PORT", "8000"))
     b = binary()
@@ -87,7 +87,7 @@ def start(port: int | None = None, wait_s: float = 35, tries: int = 2) -> dict:
             return status()
         stop()   # failed or timed out: clean up before trying again
     hint = f" ({_last})" if _last else ""
-    _error = "The internet link did not start: Cloudflare did not answer in time. Check the internet connection and press the button again." + hint
+    _error = "The internet link did not start: Cloudflare did not answer in time. This happens on some Wi-Fi networks. Press the button again, or use a phone hotspot instead (no internet needed)." + hint
     return status()
 
 
