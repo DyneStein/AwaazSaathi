@@ -660,3 +660,79 @@ def test_internet_link_is_replaced_when_it_stops_answering(monkeypatch):
         assert tunnel.status()["running"]
     finally:
         tunnel.stop()
+
+
+def test_cloudflare_alternates_connection_type_and_link_checks_judge_pages():
+    from app import tunnel
+    cf = tunnel.Cloudflare()
+    cf.binary = lambda: "cloudflared"
+    protos = [cf.command(8000)[cf.command(8000).index("--protocol") + 1] for _ in range(1)]
+    cf.launches = 0
+    seq = []
+    for _ in range(4):
+        c = cf.command(8000)
+        seq.append(c[c.index("--protocol") + 1])
+    assert seq == ["auto", "http2", "auto", "http2"] and protos
+
+    class R:
+        def __init__(self, code, body):
+            self.status_code, self._b = code, body
+
+        def json(self):
+            import json
+            return json.loads(self._b)
+    assert tunnel._judge(R(200, '{"ok": true, "app": "awaazsaathi"}')) == "ok"
+    assert tunnel._judge(R(200, "<html>sign in</html>")) == "wrong"          # a sign-in page is never used
+    assert tunnel._judge(R(302, "")) == "wrong"
+    assert tunnel._judge(R(530, "")) == "wait" and tunnel._judge(R(502, "")) == "wait"   # tunnel still warming up
+
+
+def test_a_link_that_cannot_be_checked_yet_is_used_but_a_wrong_page_never(monkeypatch):
+    from app import tunnel
+    monkeypatch.setattr(tunnel.time, "sleep", lambda s: None)
+    monkeypatch.setattr(tunnel, "probe", lambda u: "none")
+    assert tunnel.verify("https://x-y.trycloudflare.com", budget_s=0.05) is None
+    monkeypatch.setattr(tunnel, "probe", lambda u: "wrong")
+    assert tunnel.verify("https://admin.localhost.run", budget_s=1) is False
+
+
+def test_all_link_tools_race_and_the_first_good_link_wins_fast(monkeypatch):
+    import sys
+    import time
+
+    from app import tunnel
+
+    def fake(name, script):
+        class F(tunnel.Provider):
+            label = name
+            tries, wait_s = 1, 20.0
+
+            def binary(self):
+                return sys.executable
+
+            def command(self, port):
+                return [sys.executable, "-u", "-c", script]
+
+            def url_from(self, line):
+                return tunnel.ALL["cloudflare"].url_from(line)
+        F.name = name
+        return F()
+
+    hangs = fake("hangs", "import time; time.sleep(60)")
+    wrong = fake("wrong", "import time; print('https://wrong-page-here.trycloudflare.com'); time.sleep(60)")
+    good = fake("good", "import time; time.sleep(0.5); print('https://good-link-here.trycloudflare.com'); time.sleep(60)")
+    monkeypatch.setattr(tunnel, "providers", lambda: [hangs, wrong, good])
+    monkeypatch.setattr(tunnel, "verify", lambda u, budget_s=0: "good" in u if "wrong" not in u else False)
+    t0 = time.time()
+    try:
+        st = tunnel.start(port=8000, wait_s=8)
+        assert st["running"] and st["url"] == "https://good-link-here.trycloudflare.com" and st["provider"] == "good"
+        assert time.time() - t0 < 5                       # not one after another
+        for _ in range(50):                               # the other two are closed
+            if len(tunnel._candidates) <= 1:
+                break
+            time.sleep(0.1)
+        assert tunnel._candidates == [tunnel._proc]
+    finally:
+        tunnel.stop()
+    assert tunnel._candidates == []

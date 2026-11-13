@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # One-command start: builds the front end (if needed), starts the server on all interfaces, prints LAN URLs + QR.
-# ./scripts/start.sh --online   also opens a free internet link (Cloudflare quick tunnel) so phones on any network can join.
+# The internet link (phones on any network) starts automatically with the server, so it is ready before the demo.
+# ./scripts/start.sh --local   starts without it (same Wi-Fi or phone hotspot only).
 set -e
-ONLINE=0; [ "$1" = "--online" ] && ONLINE=1
+ONLINE=1; [ "$1" = "--local" ] && ONLINE=0
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 [ -f .env ] || { cp .env.example .env; echo "Created .env from .env.example - add your keys"; }
@@ -26,7 +27,7 @@ echo "  Same Wi-Fi link:    http://$IP:8000   (teammates: AwaazSaathi-Open.bat)"
 echo ""
 uv run python -c "import qrcode; q=qrcode.QRCode(border=1); q.add_data('http://$IP:8000/connect'); q.print_ascii(invert=True)" 2>/dev/null || true
 echo "  Scan to open the Connect page on a phone (same Wi-Fi)."
-[ "$ONLINE" = 1 ] && { echo "  --online: an internet link for phones on any network starts once the server is up."; export AWAAZ_ONLINE=1; }
+[ "$ONLINE" = 1 ] && { echo "  Internet link: starting by itself in the background (Connect page shows it; --local to skip)."; export AWAAZ_ONLINE=1; }
 echo ""
 (for i in $(seq 1 40); do curl -s localhost:8000/api/health >/dev/null && break; sleep 1; done
  [ "$ONLINE" = 1 ] && echo "  The internet link is being set up in the background: see the Connect page."
