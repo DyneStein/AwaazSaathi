@@ -87,10 +87,22 @@ async function fetchClip(url: string): Promise<ArrayBuffer> {
   const store = typeof caches !== 'undefined' ? await caches.open(VOICE_CACHE).catch(() => null) : null
   const hit = store ? await store.match(url).catch(() => undefined) : undefined
   if (hit) return hit.arrayBuffer()
-  const r = await fetch(url)
-  if (!r.ok) throw new Error(String(r.status))
-  if (store) store.put(url, r.clone()).catch(() => {})
-  return r.arrayBuffer()
+  // Free tunnels sometimes answer 502 or drop a download: try again a few times before giving up.
+  let last: unknown = null
+  for (let i = 0; i < 4; i++) {
+    try {
+      const r = await fetch(url, { cache: 'no-store' })
+      if (r.ok) {
+        const data = await r.arrayBuffer()
+        if (store) store.put(url, new Response(data.slice(0), { headers: { 'Content-Type': 'audio/mpeg' } })).catch(() => {})
+        return data
+      }
+      last = new Error(String(r.status))
+      if (r.status < 500 && r.status !== 429) break          // a real "not found": retrying will not help
+    } catch (e) { last = e }
+    await new Promise((res) => setTimeout(res, 1200 * (i + 1)))
+  }
+  throw last ?? new Error('voice clip unavailable')
 }
 
 /** Downloads clips ahead of time (one after another, so the current clip is never starved). */

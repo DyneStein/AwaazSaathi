@@ -106,6 +106,7 @@ export default function Farmer() {
   const myTopic = farmerId ? `farmer:${farmerId}` : ''
   const ws = useWS(myTopic ? [myTopic, 'reset', 'status'] : ['reset', 'status'], (m) => {
     if (m.event.startsWith('rtc_')) { video.onSignal(m.event, m.data); return }
+    if (m.event === 'callback' || m.event === 'followup') preloadVoice([m.data.audio_url, m.data.expert_audio_url])   // download while it rings
     if (m.event === 'callback') {
       loadInbox()
       if (m.data.channel && m.data.channel !== 'voice') beep(520, 200, 2)              // asked from the smartphone: answer arrives in the chat
@@ -136,7 +137,7 @@ export default function Farmer() {
     recheck.current = false
     const recent = Date.now() - 15 * 60 * 1000
     const it = inbox.find((i) => !i.heard && ['callback', 'followup'].includes(i.kind) && (i.channel || 'voice') === 'voice' && new Date(i.created_at).getTime() > recent && !rang.current.has(i.id))
-    if (it && lineFree()) { rang.current.add(it.id); setMenu(null); setAux({ kind: it.kind, stage: 'ringing', data: { query_id: it.query_id, text: it.text_ur, audio_url: it.audio_url, by: 'the agronomist' } }) }
+    if (it && lineFree()) { preloadVoice([it.audio_url]); rang.current.add(it.id); setMenu(null); setAux({ kind: it.kind, stage: 'ringing', data: { query_id: it.query_id, text: it.text_ur, audio_url: it.audio_url, by: 'the agronomist' } }) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inbox, phoneMode])
 
