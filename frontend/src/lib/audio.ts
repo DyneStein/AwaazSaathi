@@ -6,6 +6,20 @@ import { useRef, useState } from 'react'
  * (every tap keeps it unlocked, also after the microphone was in use). If the browser still refuses, the clip waits
  * and the page shows "Tap to hear" instead of silently moving on. */
 let ctx: AudioContext | null = null
+
+/* Loudspeaker, not the ear speaker.
+ * Phones switch to "voice call" audio (ear speaker) when a page records with echo cancellation, and iPhone Safari
+ * keeps a page that used the microphone in that mode. The helpline never plays sound while it records, so:
+ * record without echo cancellation, and on iPhone (Safari 16.4+) mark the page as media playback except while recording. */
+export const MIC: MediaTrackConstraints = { echoCancellation: false, noiseSuppression: true, autoGainControl: true }
+function session(type: 'playback' | 'play-and-record') {
+  try { const s = (navigator as any).audioSession; if (s && s.type !== type) s.type = type } catch { /* not supported: nothing to do */ }
+}
+/** Asks for microphone permission up front (so the dialog does not interrupt the question), then releases it. */
+export function askMicPermission() {
+  session('play-and-record')
+  navigator.mediaDevices?.getUserMedia?.({ audio: MIC }).then((st) => st.getTracks().forEach((t) => t.stop())).catch(() => {}).finally(() => session('playback'))
+}
 let source: AudioBufferSourceNode | null = null
 let element: HTMLAudioElement | null = null
 let token = 0
@@ -76,6 +90,7 @@ function readAloud(text: string): Promise<void> {
 }
 
 async function play(url: string, text: string, my: number): Promise<void> {
+  session('playback')
   const c = context()
   if (c) {
     try {
@@ -142,7 +157,8 @@ export function useRecorder() {
       return false
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      session('play-and-record')
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: MIC })
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : ''
       const r = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
       chunks.current = []
@@ -152,6 +168,7 @@ export function useRecorder() {
       setRecording(true)
       return true
     } catch (e: any) {
+      session('playback')
       setError(e?.message || 'Microphone blocked')
       return false
     }
@@ -162,6 +179,7 @@ export function useRecorder() {
     rec.current = null
     r.onstop = () => {
       r.stream.getTracks().forEach((t) => t.stop())
+      session('playback')
       setRecording(false)
       resolve(new Blob(chunks.current, { type: r.mimeType || 'audio/webm' }))
     }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Captions, Keyboard, Mic, MicOff, Send, SlidersHorizontal } from 'lucide-react'
 import { api, post } from '../lib/api'
-import { beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
+import { askMicPermission, beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
 import { useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
 import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../components/ui'
@@ -157,7 +157,7 @@ export default function Farmer() {
     unlockAudio(); stopAudio(); setResult(null); setCrop(''); setDuration(''); setTyped(''); setKeys([]); setLines([]); setMenu(null)
     go('connecting'); beep(440, 600, 2)
     // Ask for the microphone now, so the browser's permission box does not interrupt the question later.
-    navigator.mediaDevices?.getUserMedia?.({ audio: true }).then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {})
+    askMicPermission()
     try {
       const c = await post('/api/call/start', { phone, language: lang })
       setCall(c); setFarmerId(c.farmer_id); consentDone.current = false
