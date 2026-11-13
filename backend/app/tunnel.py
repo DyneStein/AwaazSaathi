@@ -84,6 +84,30 @@ def probe(url: str) -> str:
     return "none" if seen == "none" else "wait"
 
 
+SLOW_KBPS = 60      # below this the first page load on a phone takes too long for a demo
+
+
+def measure_kbps(url: str) -> float | None:
+    """Download speed through the link in KB/s (120 KB test, 15 s at most). None when it could not be measured."""
+    import httpx
+    t0 = time.time()
+    got = 0
+    try:
+        with httpx.stream("GET", url.rstrip("/") + "/api/speedtest?kb=120", timeout=15,
+                          headers={"Accept-Encoding": "identity", "ngrok-skip-browser-warning": "1"}) as r:
+            if r.status_code != 200:
+                return None
+            for chunk in r.iter_bytes():
+                got += len(chunk)
+                if time.time() - t0 > 15:
+                    break
+    except Exception:  # noqa: BLE001
+        if not got:
+            return None
+    dt = max(time.time() - t0, 0.05)
+    return round(got / 1024 / dt, 1)
+
+
 def verify(url: str, budget_s: float = VERIFY_S) -> bool | None:
     """True: the link reaches this server. False: it shows some other page, never use it.
     None: nothing answered within the budget (still spreading); the link is used and the health check watches it."""
@@ -246,6 +270,8 @@ _rejected: set[str] = set()
 _misses = 0
 _checked = 0.0
 _verified = False
+_kbps: float | None = None
+_last_upgrade = 0.0
 _gen = 0          # each start() gets a new keeper; an older keeper sees the change and exits
 CHECK_EVERY_S = 30
 NO_TOOL = "No tunnel tool is installed. Mac: brew install cloudflared (or ngrok). The phone hotspot needs nothing."
@@ -265,7 +291,7 @@ def status() -> dict:
     return {"available": bool(avail), "providers": avail, "running": on, "url": _url if on else None,
             "provider": _provider.label if on and _provider else None, "fixed": bool(on and _provider and _provider.fixed),
             "keeping": _keep, "phase": _phase if _keep and not on else "", "attempts": _attempts, "error": _error,
-            "since": _started_at if on else None, "changes": _changes, "rejected": sorted(_rejected)[-3:], "verified": bool(on and _verified)}
+            "since": _started_at if on else None, "changes": _changes, "rejected": sorted(_rejected)[-3:], "verified": bool(on and _verified), "kbps": _kbps if on else None, "slow": bool(on and _kbps is not None and _kbps < SLOW_KBPS)}
 
 
 def public_url() -> str | None:
@@ -312,12 +338,17 @@ def _reader(p: subprocess.Popen, prov: Provider) -> None:
         seen.add(u)
         if p not in _candidates and p is not _proc:
             return                                    # this candidate already lost or was stopped
-        if _url and p is not _proc:
+        if _url and p is not _proc and p not in _challengers:
             continue                                  # another tool already won
         ok = verify(u)
         if ok is False:
             _last = f"{prov.label}: {u} showed a different page, ignored"
             continue
+        if p in _challengers:
+            k = measure_kbps(u) if ok else None
+            if not _upgrade_to(p, prov, u, k):
+                _end(p)
+            return
         with _lock:
             if (_url and p is not _proc) or (p not in _candidates and p is not _proc):
                 continue
@@ -329,9 +360,64 @@ def _reader(p: subprocess.Popen, prov: Provider) -> None:
         except OSError:
             pass
         _notify()
+        threading.Thread(target=_measure, args=(u,), daemon=True).start()
+
+
+def _measure(u: str) -> None:
+    global _kbps
+    _kbps = None
+    k = measure_kbps(u)
+    if _url == u:
+        _kbps = k
+        _notify()
 
 
 _candidates: list[subprocess.Popen] = []
+_challengers: set = set()
+UPGRADE_EVERY_S = 60
+
+
+def _upgrade_to(p: subprocess.Popen, prov: Provider, u: str, k: float | None) -> bool:
+    """A challenger replaces a slow link only when it is clearly faster."""
+    global _proc, _provider, _url, _verified, _started_at, _changes, _kbps
+    with _lock:
+        _challengers.discard(p)
+        if not _url or not k or (_kbps is not None and k < max(_kbps * 2, SLOW_KBPS)):
+            return False
+        old = _proc
+        _proc, _provider, _url, _verified, _kbps = p, prov, u, True, k
+        _started_at, _changes = time.time(), _changes + 1
+        if old in _candidates:
+            _candidates.remove(old)
+    if old is not None:
+        _end(old)
+    try:
+        _url_file().write_text(u, "utf-8")
+    except OSError:
+        pass
+    _notify()
+    return True
+
+
+def _challenge(port: int, gen: int) -> None:
+    """While the link is slow, race the other tools in the background; a faster link takes over by itself."""
+    others = [x for x in providers() if x.available() and x is not _provider]
+    for prov in others:
+        for _ in range(prov.parallel):
+            if not _keep or gen != _gen:
+                return
+            c = _spawn(prov, port)
+            _challengers.add(c)
+    end = time.time() + max((x.wait_s for x in others), default=0) + 20
+    while time.time() < end and _keep and gen == _gen and any(c.poll() is None for c in list(_challengers)):
+        time.sleep(0.5)
+    for c in list(_challengers):
+        _challengers.discard(c)
+        if c is not _proc:
+            with _lock:
+                if c in _candidates:
+                    _candidates.remove(c)
+            _end(c)
 
 
 def _spawn(prov: Provider, port: int) -> subprocess.Popen:
@@ -367,6 +453,7 @@ def _kill() -> None:
     with _lock:
         everyone = list(_candidates) + ([_proc] if _proc is not None and _proc not in _candidates else [])
         _candidates.clear()
+        _challengers.clear()
         had = bool(_url)
         _proc, _url = None, None
     for c in everyone:
@@ -425,7 +512,7 @@ def _attempt_all(port: int, gen: int) -> bool:
 
 
 def _keeper(port: int, gen: int) -> None:
-    global _phase, _error, _misses, _checked, _verified
+    global _phase, _error, _misses, _checked, _verified, _last_upgrade
     while _keep and gen == _gen:
         if not running():
             if _url is not None:
@@ -440,6 +527,11 @@ def _keeper(port: int, gen: int) -> None:
                         break
                     time.sleep(0.5)
                 continue
+        # A slow link (localhost.run's free tier is throttled): look for a faster one in the background.
+        if (_url and running() and _kbps is not None and _kbps < SLOW_KBPS and not _challengers
+                and time.time() - _last_upgrade > UPGRADE_EVERY_S):
+            _last_upgrade = time.time()
+            threading.Thread(target=_challenge, args=(port, gen), daemon=True).start()
         # Health check: a tunnel can stay "running" while no traffic gets through.
         if _url and running() and time.time() - _checked > CHECK_EVERY_S:
             _checked = time.time()

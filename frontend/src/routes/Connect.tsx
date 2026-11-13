@@ -90,6 +90,9 @@ export default function Connect() {
             <div className="flex-1 min-w-[260px]">
               {publicUrl ? <><div className="font-semibold flex items-center gap-2">Internet link is on{tunnel?.provider && <span className="text-[13px] font-normal text-muted">via {tunnel.provider}{tunnel.fixed ? ', fixed address' : ', temporary address'}</span>}<Mic size={15} className="text-field-700" /></div>
                 <button onClick={() => copy(publicUrl)} className="text-[14px] text-field-700 break-all text-left inline-flex items-center gap-1.5">{publicUrl}{copied === publicUrl ? <Check size={14} /> : <Copy size={14} />}</button>
+                {tunnel?.kbps != null && (tunnel.slow
+                  ? <div className="mt-1 rounded-lg bg-warn-50 border border-warn/30 text-warn text-[13px] px-2.5 py-1.5" data-testid="link-slow">Slow link: {tunnel.kbps} KB/s. The first page load on a phone can take minutes. Use the phone hotspot, or set up ngrok (README) for a fast link.</div>
+                  : <div className="text-[12.5px] text-field-700 font-semibold">Speed checked: {tunnel.kbps} KB/s</div>)}
                 <div className="text-[12.5px] text-muted">Works from any network, including mobile data, and the microphone works. {tunnel?.fixed ? 'This address stays the same every time.' : 'It is a random address: if the link has to restart, phones must scan again.'} Anyone with it can open the demo, so share it only with the team and judges. It is kept alive in the background.</div></>
                 : trying ? <><div className="font-semibold flex items-center gap-2"><Spinner />{tunnel.phase || 'Setting up the internet link'}</div>
                 <div className="text-[13.5px] text-muted">Keeps trying by itself{tunnel.attempts ? ` (${tunnel.attempts} ${tunnel.attempts === 1 ? 'attempt' : 'attempts'} so far)` : ''}. The QR codes switch over the moment it is up. Meanwhile the phone hotspot works.</div>

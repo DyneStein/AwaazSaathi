@@ -739,3 +739,52 @@ def test_all_link_tools_race_and_the_first_good_link_wins_fast(monkeypatch):
     finally:
         tunnel.stop()
     assert tunnel._candidates == []
+
+
+def test_pages_and_data_are_compressed_but_audio_is_not(client):
+    r = client.get("/api/admin/map", headers={"Accept-Encoding": "gzip"})
+    assert r.status_code == 200 and r.headers.get("content-encoding") == "gzip"
+    clip = next((config.TTS_DIR).glob("*.mp3"), None)
+    if clip:
+        a = client.get(f"/media/tts/{clip.name}", headers={"Accept-Encoding": "gzip", "Range": "bytes=0-99"})
+        assert a.headers.get("content-encoding") is None and a.status_code in (200, 206)
+
+
+def test_a_slow_link_is_replaced_by_a_faster_one_in_the_background(monkeypatch):
+    import sys
+    import time
+
+    from app import tunnel
+
+    def fake(name, delay):
+        class F(tunnel.Provider):
+            label = name
+            tries, wait_s = 1, 20.0
+
+            def binary(self):
+                return sys.executable
+
+            def command(self, port):
+                return [sys.executable, "-u", "-c", f"import time; time.sleep({delay}); print('https://{name}-link-here.trycloudflare.com'); time.sleep(60)"]
+
+            def url_from(self, line):
+                return tunnel.ALL["cloudflare"].url_from(line)
+        F.name = name
+        return F()
+
+    slow, fast = fake("slow", 0.1), fake("fast", 1.5)          # the slow one wins the first race
+    monkeypatch.setattr(tunnel, "providers", lambda: [slow, fast])
+    monkeypatch.setattr(tunnel, "verify", lambda u, budget_s=0: True)
+    monkeypatch.setattr(tunnel, "measure_kbps", lambda u: 4.0 if "slow" in u else 900.0)
+    monkeypatch.setattr(tunnel, "UPGRADE_EVERY_S", 0)
+    try:
+        st = tunnel.start(port=8000, wait_s=8)
+        assert st["provider"] == "slow"
+        for _ in range(100):
+            time.sleep(0.1)
+            if tunnel.status()["provider"] == "fast":
+                break
+        st = tunnel.status()
+        assert st["provider"] == "fast" and st["url"] == "https://fast-link-here.trycloudflare.com" and st["kbps"] == 900.0 and not st["slow"]
+    finally:
+        tunnel.stop()

@@ -89,6 +89,24 @@ async def lifespan(_app):
 
 app = FastAPI(title="AwaazSaathi", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# Compress pages, scripts and data (about a third of the size): faster on slow links and phone hotspots.
+# Audio, photos and recordings are left alone (already compressed; players fetch them in ranges).
+from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+
+_NO_GZIP = ("/media", "/uploads", "/recordings", "/ws")
+
+
+class SelectiveGZip:
+    def __init__(self, app_):
+        self.plain, self.gzip = app_, GZipMiddleware(app_, minimum_size=800)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and not scope["path"].startswith(_NO_GZIP):
+            return await self.gzip(scope, receive, send)
+        return await self.plain(scope, receive, send)
+
+
+app.add_middleware(SelectiveGZip)
 for mod in (farmer, expert, dealer, admin):
     app.include_router(mod.r)
 
@@ -138,6 +156,14 @@ def lan():
     pub = tunnel.public_url()
     secure = f"https://{ip}:{tls.PORT}" if tls.state["running"] else None
     return {"ip": ip, "base": base, "secure": secure, "public": pub, "dealer": f"{base}/dealer", "farmer": f"{base}/farmer", "expert": f"{base}/expert", "admin": f"{base}/admin"}
+
+
+@app.get("/api/speedtest")
+def speedtest(kb: int = 120):
+    """Incompressible bytes for measuring how fast a link is (used by the internet link check)."""
+    from fastapi.responses import Response
+    return Response(os.urandom(max(1, min(kb, 1024)) * 1024), media_type="application/octet-stream",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/tunnel")
