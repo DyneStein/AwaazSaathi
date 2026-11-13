@@ -498,3 +498,9 @@ def test_speech_cleanup_rules():
     assert stt.dedupe("چھوٹے چھوٹے سبز کیڑے") == "چھوٹے چھوٹے سبز کیڑے"        # doubled words are real Urdu
     assert stt.garbled("Mary, kanakðu pate píleni?") and not stt.garbled("meri kanak de pattay") and not stt.garbled("میری کنک")
     assert set(stt.PROMPT) == {"pa", "ur"}
+
+
+def test_internet_link_ignores_cloudflare_error_messages():
+    from app import tunnel
+    assert tunnel.URL_RE.search('failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel"') is None
+    assert tunnel.URL_RE.search("|  https://tourist-states-retailer-prices.trycloudflare.com  |").group(0) == "https://tourist-states-retailer-prices.trycloudflare.com"
