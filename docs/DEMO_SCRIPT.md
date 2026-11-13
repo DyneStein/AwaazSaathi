@@ -1,6 +1,6 @@
 # Live demo: exact flow (about 5 minutes)
 
-**With phones (recommended):** on the laptop open `/connect`. Judges or teammates scan the three QR codes: **farmer**, **agronomist**, **dealer**. The farmer phone asks once for **Button phone** or **Smartphone**; pick Button phone and an **Okara** farmer (that farmer also gets the outbreak alert in step 6). Put **`/admin`** (the operations map) on the projector: every step below appears on it live. If phones are not on the Mac's Wi-Fi, press **Turn on internet link** on `/connect` first. Without the internet link, use **Choose a question** on the farmer phone instead of speaking.
+**With phones (recommended):** on the laptop open `/connect`. Judges or teammates scan the three QR codes: **farmer**, **agronomist**, **dealer**. The farmer phone asks once for **Button phone** or **Smartphone**; pick Button phone and an **Okara** farmer (that farmer also gets the outbreak alert in step 6). Put **`/admin`** (the operations map) on the projector: every step below appears on it live. If phones are not on the Mac's Wi-Fi, press **Turn on internet link** on `/connect` first. Voice works on both links; on the Wi-Fi link each phone shows a one-time "not private" warning (Android: Advanced, Proceed; iPhone: Show Details, visit this website). **Choose a question** stays available as a backup.
 
 **Laptop only:** the steps below as written.
 

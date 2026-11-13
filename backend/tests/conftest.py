@@ -3,6 +3,7 @@ import tempfile
 
 # Isolated test DB and upload folders, never touch the demo data; never call external APIs or local models.
 os.environ["OFFLINE_MODE"] = "true"
+os.environ["AWAAZ_HTTPS"] = "0"   # no second https listener during tests
 import app.config as config  # noqa: E402
 from pathlib import Path  # noqa: E402
 

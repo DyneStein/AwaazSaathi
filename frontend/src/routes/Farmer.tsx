@@ -9,7 +9,7 @@ import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../c
 import { KeypadPhone, type Lcd, type PhoneKey } from '../components/KeypadPhone'
 import { Decision } from '../components/Decision'
 import { Chat, type Lang } from './farmer/Chat'
-import { KeypadScreen, SettingsSheet, SetupScreen, readSetup, saveSetup, type PhoneSetup } from './farmer/PhoneMode'
+import { KeypadScreen, SettingsSheet, SetupScreen, VoiceBanner, micAllowed, readSetup, saveSetup, useSecureLink, type PhoneSetup } from './farmer/PhoneMode'
 
 type Step = 'idle' | 'connecting' | 'welcome' | 'notice' | 'tehsil' | 'tehsil_pick' | 'crop' | 'duration' | 'ask' | 'thinking'
   | 'answer' | 'escalated' | 'more' | 'consent' | 'ended'
@@ -49,6 +49,7 @@ export default function Farmer() {
   const phoneMode = params.get('device') === 'phone' || (params.get('device') !== 'stage' && window.innerWidth < 768)
   const [setup, setSetup] = useState<PhoneSetup | null>(() => (phoneMode ? readSetup() : null))
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const secureLink = useSecureLink()
   const [meta, setMeta] = useState<any>(null)
   const [prompts, setPrompts] = useState<Record<string, Prompt>>({})
   const [phone, setPhone] = useState('')
@@ -348,6 +349,7 @@ export default function Farmer() {
     return (
       <div className="min-h-[100dvh] bg-canvas">
         <DeviceFrame statusTone="dark" label="Smartphone">
+          {!micAllowed() && <div className="shrink-0 order-last px-3 pb-2 bg-white"><VoiceBanner url={secureLink} /></div>}
           <Chat meta={meta} phone={phone} lang={lang} inbox={inbox} resetKey={resetKey} onResult={setResult} onHeard={markHeard} onSettings={() => setSettingsOpen(true)} />
           <VideoCallView state={video.state} local={video.local} remote={video.remote} peerName={video.peer?.name || 'AwaazSaathi agronomist'} error={video.error} onAccept={video.accept} onDecline={video.decline} onHangup={video.hangup} />
           {settings}

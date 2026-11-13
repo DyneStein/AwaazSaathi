@@ -27,7 +27,7 @@ export default function Connect() {
     api('/api/tunnel').then(setTunnel).catch(() => {})
   }, [])
   const publicUrl: string | null = onTunnel ? location.origin : lan?.public || tunnel?.url || null
-  const lanBase: string = lan?.base || location.origin
+  const lanBase: string = lan?.secure || lan?.base || location.origin
   const base = net === 'web' ? publicUrl : lanBase
 
   const toggle = async (on: boolean) => {
@@ -50,12 +50,22 @@ export default function Connect() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 py-6">
-        {net === 'lan' ? (
-          <div className="flex flex-wrap items-start gap-3 text-[14px] text-muted">
-            <MicOff size={18} className="text-warn mt-0.5 shrink-0" />
-            <p className="flex-1 min-w-[260px]">Phones must be on the same Wi-Fi or hotspot as this computer ({lanBase.replace('http://', '')}). On this local link phone browsers block the microphone, so the farmer phone sends sample or typed questions. For speaking on the phone, use <button onClick={() => setNet('web')} className="font-semibold text-field-700 underline underline-offset-2">Any network</button>.</p>
+        {net === 'lan' ? (lan?.secure ? (
+          <div className="surface p-4 flex flex-wrap items-start gap-x-5 gap-y-3" data-testid="secure-link">
+            <Mic size={22} className="text-field-700 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-[260px] text-[14px]">
+              <div className="font-semibold">Secure Wi-Fi link: the microphone works on phones</div>
+              <p className="text-muted mt-0.5">Phones must be on the same Wi-Fi or hotspot as this computer. The first time, the phone warns that the connection is not private, because the certificate was made on this computer, not bought. That is expected for this demo:</p>
+              <ul className="mt-1.5 space-y-0.5"><li><b>Android (Chrome):</b> tap <b>Advanced</b>, then <b>Proceed to {lan.ip}</b>.</li><li><b>iPhone (Safari):</b> tap <b>Show Details</b>, then <b>visit this website</b>, then <b>Visit Website</b>.</li></ul>
+              <p className="text-muted mt-1.5">If the page does not open at all, this Wi-Fi keeps devices apart (common on university and office Wi-Fi). Use <button onClick={() => setNet('web')} className="font-semibold text-field-700 underline underline-offset-2">Any network</button> instead.</p>
+            </div>
           </div>
         ) : (
+          <div className="flex flex-wrap items-start gap-3 text-[14px] text-muted">
+            <MicOff size={18} className="text-warn mt-0.5 shrink-0" />
+            <p className="flex-1 min-w-[260px]">Phones must be on the same Wi-Fi or hotspot as this computer ({lanBase.replace('http://', '')}). The secure Wi-Fi link is not running, so phone browsers block the microphone here. For speaking on the phone, use <button onClick={() => setNet('web')} className="font-semibold text-field-700 underline underline-offset-2">Any network</button>.</p>
+          </div>
+        )) : (
           <div className="surface p-4 flex flex-wrap items-center gap-x-5 gap-y-3" data-testid="internet-link">
             <Globe size={22} className="text-field-700 shrink-0" />
             <div className="flex-1 min-w-[260px]">

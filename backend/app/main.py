@@ -13,7 +13,7 @@ from .api import admin, dealer, expert, farmer
 from .db import SessionLocal
 from .models import KBEntry
 from .pipeline import retrieval
-from . import tunnel
+from . import tls, tunnel
 from .ws import hub
 
 STATIC = config.BACKEND / "static"
@@ -47,8 +47,15 @@ async def lifespan(_app):
     finally:
         db.close()
     task = asyncio.create_task(_sla_loop())
+    secure = asyncio.create_task(tls.serve(_app, lan_ip())) if tls.enabled() else None
     yield
     task.cancel()
+    if secure:
+        tls.stop()
+        try:
+            await asyncio.wait_for(secure, 3)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            secure.cancel()
     tunnel.stop()
     hub.loop = None
 
@@ -102,7 +109,8 @@ def lan():
     ip = lan_ip()
     base = f"http://{ip}:8000"
     pub = tunnel.public_url()
-    return {"ip": ip, "base": base, "public": pub, "dealer": f"{base}/dealer", "farmer": f"{base}/farmer", "expert": f"{base}/expert", "admin": f"{base}/admin"}
+    secure = f"https://{ip}:{tls.PORT}" if tls.state["running"] else None
+    return {"ip": ip, "base": base, "secure": secure, "public": pub, "dealer": f"{base}/dealer", "farmer": f"{base}/farmer", "expert": f"{base}/expert", "admin": f"{base}/admin"}
 
 
 @app.get("/api/tunnel")

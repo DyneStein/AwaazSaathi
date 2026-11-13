@@ -18,9 +18,30 @@ export function saveSetup(s: PhoneSetup | null) {
 /** Phone browsers only allow the microphone on https:// pages (or localhost). */
 export const micAllowed = () => typeof window !== 'undefined' && window.isSecureContext && !!navigator.mediaDevices?.getUserMedia
 
+/** On a plain http:// Wi-Fi address, the same page on the server's secure port (null when not available). */
+export function useSecureLink(): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (window.isSecureContext) return
+    fetch('/api/lan').then((r) => r.json()).then((l) => { if (l.secure) setUrl(`https://${location.hostname}:${new URL(l.secure).port}${location.pathname}${location.search}`) }).catch(() => {})
+  }, [])
+  return url
+}
+
+/** Shown when the microphone is blocked: one tap moves to the secure link where it works. */
+export function VoiceBanner({ url, dark = false }: { url: string | null; dark?: boolean }) {
+  if (micAllowed()) return null
+  return (
+    <div className={`rounded-xl px-3 py-2.5 text-[13px] ${dark ? 'bg-white text-ink' : 'bg-warn-50 text-ink border border-warn/20'}`} data-testid="voice-banner">
+      <div className="flex items-start gap-2"><MicOff size={16} className="text-warn shrink-0 mt-0.5" /><span className="flex-1">{url ? 'Voice is off on this link. Open the secure link to speak. The phone warns once: tap Advanced, then Proceed.' : 'Voice is off on this link. Ask the presenter for the secure or internet link.'}</span></div>
+      {url && <a href={url} className="btn btn-primary w-full mt-2 !py-2 text-[14px]"><Mic size={16} />Turn on voice</a>}
+    </div>)
+}
+
 /** First screen on a real phone: which kind of phone this farmer has, and which farmer they are. */
 export function SetupScreen({ meta, initial, onDone }: { meta: any; initial: PhoneSetup | null; onDone: (s: PhoneSetup) => void }) {
   const [kind, setKind] = useState<PhoneKind | null>(initial?.kind || null)
+  const secure = useSecureLink()
   const [phone, setPhone] = useState(initial?.phone || '')
   // Each judge's phone starts as a different farmer, so two phones rarely share an inbox.
   useEffect(() => { if (!phone && meta?.personas?.length) setPhone(meta.personas[Math.floor(Math.random() * meta.personas.length)].phone) }, [meta, phone])
@@ -41,6 +62,7 @@ export function SetupScreen({ meta, initial, onDone }: { meta: any; initial: Pho
         <p className="mt-1 text-field-200 text-[14.5px]">This phone becomes a farmer’s phone for the demo. You can change it later in Settings.</p>
       </header>
       <main className="flex-1 px-4 py-5 space-y-6 max-w-lg w-full mx-auto">
+        <VoiceBanner url={secure} />
         <section>
           <h2 className="font-bold">Which phone does the farmer have?</h2>
           <div className="mt-2.5 space-y-2.5">
@@ -69,6 +91,7 @@ export function SetupScreen({ meta, initial, onDone }: { meta: any; initial: Pho
 export function SettingsSheet({ meta, setup, lang, inCall, onLang, onChange, onRestart, onClose }: {
   meta: any; setup: PhoneSetup; lang: Lang; inCall: boolean; onLang: (l: Lang) => void; onChange: (s: PhoneSetup) => void; onRestart: () => void; onClose: () => void
 }) {
+  const secure = useSecureLink()
   const Row = ({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) => <div className="py-3.5 border-b border-line last:border-0"><div className="font-semibold">{title}</div>{sub && <div className="text-[12.5px] text-muted">{sub}</div>}<div className="mt-2">{children}</div></div>
   return (
     <Sheet title="Settings" onClose={onClose}>
@@ -89,8 +112,8 @@ export function SettingsSheet({ meta, setup, lang, inCall, onLang, onChange, onR
         {setup.kind === 'keypad' && <Row title="Subtitles" sub="Show what the helpline says under the phone, for the audience.">
           <button role="switch" aria-checked={setup.subtitles} onClick={() => onChange({ ...setup, subtitles: !setup.subtitles })} className={`relative h-7 w-12 rounded-full transition-colors ${setup.subtitles ? 'bg-field-700' : 'bg-line'}`}><span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${setup.subtitles ? 'left-[22px]' : 'left-0.5'}`} /></button>
         </Row>}
-        <Row title="Microphone" sub={micAllowed() ? 'Available. Speak after the beep.' : 'Phone browsers allow the microphone only on the https internet link. Here, choose a sample question or type one.'}>
-          <span className={`tag ${micAllowed() ? 'bg-field-100 text-field-800' : 'bg-warn-50 text-warn'}`}>{micAllowed() ? <Mic size={13} /> : <MicOff size={13} />}{micAllowed() ? 'On' : 'Not available on this link'}</span>
+        <Row title="Microphone" sub={micAllowed() ? 'Available. Speak after the beep.' : 'Phone browsers allow the microphone only on secure (https) links.'}>
+          {micAllowed() ? <span className="tag bg-field-100 text-field-800"><Mic size={13} />On</span> : <VoiceBanner url={secure} />}
         </Row>
         <div className="pt-4 grid gap-2">
           <button onClick={onRestart} className="btn btn-quiet w-full">Start setup again</button>
@@ -117,6 +140,7 @@ export function KeypadScreen({ lcd, onKey, ringing, clock, connected, onSettings
   }, [])
   useEffect(() => { if (!askOpen) setPick(false) }, [askOpen])
   const noMic = !micAllowed()
+  const secure = useSecureLink()
   return (
     <div className="relative h-[100dvh] flex flex-col bg-[radial-gradient(120%_80%_at_50%_0%,#123F2C_0%,#082E20_55%,#061F16_100%)] text-white overflow-hidden" data-testid="keypad-screen">
       <header className="shrink-0 flex items-center gap-2.5 px-4 pt-[max(.6rem,env(safe-area-inset-top))] pb-1">
@@ -128,6 +152,7 @@ export function KeypadScreen({ lcd, onKey, ringing, clock, connected, onSettings
         <div style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}><KeypadPhone lcd={lcd} onKey={onKey} ringing={ringing} clock={clock} /></div>
       </div>
       <div className="shrink-0 px-4 pb-[max(.8rem,env(safe-area-inset-bottom))] pt-1 space-y-2 min-h-[64px]">
+        {noMic && !askOpen && <VoiceBanner url={secure} dark />}
         {note && <div role="alert" className="text-[13px] rounded-xl bg-warn-50 text-warn px-3 py-2">{note}</div>}
         {askOpen ? <>
           {recording && <p className="text-center text-[13px] text-white flex items-center justify-center gap-1.5"><Mic size={14} className="text-[#F97066]" />Listening. Speak, then press any key.</p>}
