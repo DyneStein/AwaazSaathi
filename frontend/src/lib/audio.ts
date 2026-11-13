@@ -80,10 +80,32 @@ export function stopAudio() {
 /** Count of clips that really started (read by the browser tests). */
 const played = () => { (window as any).__awaazPlayed = ((window as any).__awaazPlayed || 0) + 1 }
 
+/* Voice clips are named by their content, so a cached copy is never stale. They are kept in the browser's cache
+ * storage (https pages only) so each clip crosses a slow link once; plain http pages simply fetch. */
+const VOICE_CACHE = 'awaaz-voice-v1'
+async function fetchClip(url: string): Promise<ArrayBuffer> {
+  const store = typeof caches !== 'undefined' ? await caches.open(VOICE_CACHE).catch(() => null) : null
+  const hit = store ? await store.match(url).catch(() => undefined) : undefined
+  if (hit) return hit.arrayBuffer()
+  const r = await fetch(url)
+  if (!r.ok) throw new Error(String(r.status))
+  if (store) store.put(url, r.clone()).catch(() => {})
+  return r.arrayBuffer()
+}
+
+/** Downloads clips ahead of time (one after another, so the current clip is never starved). */
+let preloading = Promise.resolve()
+export function preloadVoice(urls: (string | null | undefined)[]) {
+  for (const u of urls) {
+    if (!u || buffers.has(u)) continue
+    preloading = preloading.then(() => decode(u).then(() => undefined, () => undefined))
+  }
+}
+
 function decode(url: string): Promise<AudioBuffer> {
   if (!buffers.has(url)) {
     const c = context()!
-    const p = fetch(url).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer() })
+    const p = fetchClip(url)
       .then((a) => new Promise<AudioBuffer>((ok, bad) => c.decodeAudioData(a, ok, bad)))
     p.catch(() => buffers.delete(url))
     buffers.set(url, p)
@@ -104,17 +126,36 @@ function readAloud(text: string): Promise<void> {
   })
 }
 
+/* A clip that is not ready within SLOW_MS (weak link) must not leave the farmer in silence: the phone's own Urdu
+ * voice reads the line if it has one; otherwise a "voice is loading" notice shows until the clip arrives. */
+const SLOW_MS = 3000
+const slowListeners = new Set<(slow: boolean) => void>()
+const setSlow = (b: boolean) => slowListeners.forEach((f) => f(b))
+export function onAudioSlow(f: (slow: boolean) => void) { slowListeners.add(f); return () => { slowListeners.delete(f) } }
+function urduVoice(): SpeechSynthesisVoice | undefined {
+  try { return speechSynthesis.getVoices().find((x) => x.lang.toLowerCase().startsWith('ur')) } catch { return undefined }
+}
+try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {} } catch { /* not available */ }
+
 async function play(url: string, text: string, my: number): Promise<void> {
   session('playback')
   const c = context()
   if (c) {
     try {
-      const buf = await decode(url)
+      const pending = decode(url)
+      const late = Symbol('late')
+      let buf = await Promise.race([pending, new Promise<typeof late>((r) => setTimeout(() => r(late), SLOW_MS))])
       if (my !== token) return
+      if (buf === late) {
+        if (text && urduVoice()) { await readAloud(text); return }     // the clip keeps downloading for next time
+        setSlow(true)
+        try { buf = await pending } finally { setSlow(false) }
+        if (my !== token) return
+      }
       if (c.state !== 'running') await Promise.race([c.resume(), new Promise((r) => setTimeout(r, 400))])
       if (c.state === 'running') {
         return await new Promise<void>((resolve) => {
-          const s = c.createBufferSource(); s.buffer = buf; s.connect(entry(c))
+          const s = c.createBufferSource(); s.buffer = buf as AudioBuffer; s.connect(entry(c))
           s.onended = () => { if (source === s) source = null; resolve() }
           source = s; s.start(0); played()
         })

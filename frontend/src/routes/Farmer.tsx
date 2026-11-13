@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Captions, Keyboard, Mic, MicOff, Send, SlidersHorizontal } from 'lucide-react'
 import { api, post } from '../lib/api'
-import { askMicPermission, beep, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
+import { askMicPermission, beep, preloadVoice, speak, stopAudio, unlockAudio, useRecorder } from '../lib/audio'
 import { usePollWhenOffline, useWS } from '../lib/ws'
 import { useVideoCall } from '../lib/rtc'
 import { DeviceFrame, LiveDot, Logo, Mock, Segmented, VideoCallView } from '../components/ui'
@@ -92,6 +92,8 @@ export default function Farmer() {
     api('/api/status').then((s) => setOffline(s.offline)).catch(() => {})
   }, [])
   useEffect(() => { api(`/api/prompts?lang=${lang}`).then(setPrompts).catch(() => {}); try { localStorage.setItem('farmerLang', lang) } catch { /* ignore */ } }, [lang])
+  // Fetch the call's voice prompts while the farmer is still looking at the phone, so a weak link does not delay them.
+  useEffect(() => { if (phoneMode) preloadVoice(['welcome', 'ai_notice', 'tehsil_confirm', 'crop', 'duration', 'ask', 'thinking', 'more', 'consent', 'consent_yes', 'consent_no', 'tehsil_pick'].map((k) => prompts[k]?.audio_url)) }, [prompts, phoneMode])
   useEffect(() => { if (phone) api(`/api/farmer/lookup?phone=${phone}`).then((r) => setFarmerId(r.farmer_id)) }, [phone])
   const loadInbox = useCallback(() => { if (farmerId) api(`/api/farmer/${farmerId}/inbox`).then(setInbox).catch(() => {}); else setInbox([]) }, [farmerId])
   useEffect(loadInbox, [loadInbox])

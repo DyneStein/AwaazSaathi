@@ -26,3 +26,19 @@ test('on a phone the helpline voice plays at every step, including the answer af
   await expect.poll(played, { timeout: 20_000 }).toBeGreaterThan(before)   // the answer arrives seconds after the last tap and is still heard
   await expect(page.getByTestId('sound-gate')).toHaveCount(0)
 })
+
+test('on a weak link the phone never sits in silence: a notice shows, the voice still plays, clips are cached', async ({ page }) => {
+  test.setTimeout(120_000)
+  // Every voice clip takes 6 s to arrive, like the 4 KB/s free tunnel.
+  await page.route('**/media/tts/**', async (route) => { await new Promise((r) => setTimeout(r, 6000)); await route.continue() })
+  const played = () => page.evaluate(() => (window as any).__awaazPlayed || 0)
+  await page.goto('/farmer')
+  await page.getByTestId('choose-keypad').click()
+  await page.getByTestId('setup-start').click()
+  await page.getByTestId('key-call').click()
+  await expect(page.getByTestId('voice-slow')).toBeVisible({ timeout: 8_000 })        // not silence: the farmer is told
+  await expect.poll(played, { timeout: 30_000 }).toBeGreaterThan(0)                   // and the welcome is then heard
+  await expect(page.getByTestId('voice-slow')).toHaveCount(0)
+  const cached = await page.evaluate(async () => (await (await caches.open('awaaz-voice-v1')).keys()).length)
+  expect(cached).toBeGreaterThan(0)                                                   // next time it plays at once
+})

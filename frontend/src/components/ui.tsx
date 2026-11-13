@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, Loader2, Mic, MicOff, PhoneOff, Video, AlertTriangle, CheckCircle2, Signal, Wifi, BatteryMedium, X, Volume2 } from 'lucide-react'
-import { onAudioBlocked, unlockAudio } from '../lib/audio'
+import { onAudioBlocked, onAudioSlow, unlockAudio } from '../lib/audio'
 import type { LucideIcon } from 'lucide-react'
 import type { CallState } from '../lib/rtc'
 
@@ -218,7 +218,13 @@ function MuteButton({ stream }: { stream: MediaStream | null }) {
 /** Appears only when a phone browser blocked sound: one tap plays the waiting clip (the call does not move on without it). */
 export function SoundGate() {
   const [blocked, setBlocked] = useState(false)
+  const [slow, setSlow] = useState(false)
   useEffect(() => onAudioBlocked(setBlocked), [])
+  useEffect(() => onAudioSlow(setSlow), [])
+  if (slow && !blocked) return (
+    <div role="status" data-testid="voice-slow" className="fixed left-1/2 -translate-x-1/2 bottom-[max(1.5rem,env(safe-area-inset-bottom))] z-[70] rounded-full bg-ink/90 text-white text-[13.5px] px-4 py-2.5 flex items-center gap-2 shadow-lg">
+      <Loader2 size={16} className="animate-spin" />Voice is loading, the connection is slow
+    </div>)
   if (!blocked) return null
   return (
     <button onClick={unlockAudio} data-testid="sound-gate" className="fixed left-1/2 -translate-x-1/2 bottom-[max(1.5rem,env(safe-area-inset-bottom))] z-[70] btn btn-primary !rounded-full !px-6 !py-3.5 shadow-[0_12px_30px_-10px_rgba(8,46,32,.7)] ring-pulse">
